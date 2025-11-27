@@ -1,12 +1,9 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use fasttime::DateTime;
 use time::OffsetDateTime;
 
-const SAMPLE_SIZES: &[(usize, &str)] = &[
-    (64, "small"),
-    (1024, "default"),
-    (16_384, "large"),
-];
+// const SAMPLE_SIZES: &[(usize, &str)] = &[(64, "small"), (1024, "default"), (16_384, "large")];
+const SAMPLE_SIZES: &[(usize, &str)] = &[(1024, "default")];
 
 fn unix_samples(len: usize) -> Vec<(i64, i32)> {
     (0..len)

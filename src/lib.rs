@@ -117,7 +117,7 @@ impl Date {
         let bump = ypt < 126_464;
         let shift: i64 = if bump { 191_360 } else { 977_792 };
 
-        let n: i64 = (yrs % 4) * 512 + shift - ypt;
+        let n: i64 = (yrs.rem_euclid(4)) * 512 + shift - ypt;
 
         let d: i64 = (((((n as u64) & 0xFFFF) as u128) * (C3 as u128)) >> 64) as i64;
 
@@ -715,7 +715,7 @@ impl Ord for OffsetDateTime {
 
 // ===== Internal helpers =====
 
-fn parse_rfc3339_offset(s: &str) -> Result<UtcOffset, ()> {
+pub fn parse_rfc3339_offset(s: &str) -> Result<UtcOffset, ()> {
     if s == "Z" || s == "z" {
         return UtcOffset::from_seconds(0).map_err(|_| ());
     }
@@ -782,154 +782,4 @@ fn days_from_civil(y: i32, m: u8, d: u8) -> i64 {
     let doy = (153 * mp + 2) / 5 + d - 1; // [0, 365]
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy; // [0, 146096]
     era * 146_097 + doe - 719_468
-}
-
-// ===== Tests (use std, so fine even with no_std library) =====
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn date_epoch_and_neighbors() {
-        let d0 = Date::from_days_since_unix_epoch(0).unwrap();
-        assert_eq!(d0.year, 1970);
-        assert_eq!(d0.month, 1);
-        assert_eq!(d0.day, 1);
-
-        let d1 = Date::from_days_since_unix_epoch(1).unwrap();
-        assert_eq!(d1.to_string(), "1970-01-02");
-
-        let dm1 = Date::from_days_since_unix_epoch(-1).unwrap();
-        assert_eq!(dm1.to_string(), "1969-12-31");
-    }
-
-    #[test]
-    fn days_round_trip() {
-        let cases = [
-            (1970, 1, 1),
-            (1970, 1, 2),
-            (1969, 12, 31),
-            (2000, 2, 29),
-            (2000, 3, 1),
-            (1900, 3, 1),
-            (2400, 2, 29),
-        ];
-        for &(y, m, d) in &cases {
-            let date = Date::from_ymd(y, m, d).unwrap();
-            let days = date.days_since_unix_epoch();
-            let round = Date::from_days_since_unix_epoch(days).unwrap();
-            assert_eq!(date, round);
-        }
-    }
-
-    #[test]
-    fn datetime_unix_round_trip() {
-        let date = Date::from_ymd(2024, 5, 17).unwrap();
-        let time = Time::from_hms_nano(12, 34, 56, 123_456_789).unwrap();
-        let dt = DateTime::new(date, time);
-        let secs = dt.unix_timestamp();
-        let nanos = dt.time.nanosecond as i32;
-        let rt = DateTime::from_unix_timestamp(secs, nanos).unwrap();
-        assert_eq!(dt, rt);
-    }
-
-    #[test]
-    fn duration_add_sub() {
-        let date = Date::from_ymd(2020, 1, 1).unwrap();
-        let time = Time::from_hms_nano(0, 0, 0, 0).unwrap();
-        let dt = DateTime::new(date, time);
-        let dur = Duration::seconds(86_400); // 1 day
-        let dt2 = dt.add_duration(dur).unwrap();
-        assert_eq!(dt2.date.to_string(), "2020-01-02");
-        assert_eq!(dt2.time.to_string(), "00:00:00");
-
-        let diff = dt2.difference(dt);
-        assert_eq!(diff, dur);
-    }
-
-    #[test]
-    fn parse_and_display_basic() {
-        let d: Date = "2023-11-05".parse().unwrap();
-        assert_eq!(d.to_string(), "2023-11-05");
-
-        let t: Time = "23:59:59.001".parse().unwrap();
-        assert_eq!(t.to_string(), "23:59:59.001");
-
-        let dt: DateTime = "2023-11-05T23:59:59.001Z".parse().unwrap();
-        assert_eq!(dt.to_string(), "2023-11-05T23:59:59.001Z");
-    }
-
-    #[test]
-    fn offset_datetime_rfc3339() {
-        let s = "2023-11-05T23:59:59.5+02:00";
-        let odt: OffsetDateTime = s.parse().unwrap();
-        assert_eq!(odt.to_string(), s);
-
-        let odt_z: OffsetDateTime = "2023-11-05T23:59:59Z".parse().unwrap();
-        assert_eq!(odt_z.to_string(), "2023-11-05T23:59:59Z");
-    }
-
-    #[test]
-    fn date_weekday_and_ordinal() {
-        let monday = Date::from_ymd(2023, 11, 6).unwrap();
-        assert_eq!(monday.weekday(), Weekday::Monday);
-        assert_eq!(monday.ordinal(), 310);
-
-        let leap = Date::from_ymd(2020, 3, 1).unwrap();
-        assert_eq!(leap.weekday(), Weekday::Sunday);
-        assert_eq!(leap.ordinal(), 61);
-    }
-
-    #[test]
-    fn time_fractional_and_nanos() {
-        let t: Time = "12:34:56.123450700".parse().unwrap();
-        assert_eq!(t.nanosecond, 123_450_700);
-        assert_eq!(t.to_string(), "12:34:56.1234507");
-        assert_eq!(t.seconds_since_midnight(), 45_296);
-        assert_eq!(t.nanos_since_midnight(), 45_296_123_450_700);
-    }
-
-    #[test]
-    fn time_parse_rejects_invalid_fraction() {
-        assert!(matches!(
-            "12:00:00.".parse::<Time>(),
-            Err(TimeError::InvalidTime)
-        ));
-        assert!(matches!(
-            "12:00:00.1234567890".parse::<Time>(),
-            Err(TimeError::InvalidTime)
-        ));
-    }
-
-    #[test]
-    fn rfc3339_offset_variants() {
-        let with_colon = parse_rfc3339_offset("+02:30").unwrap();
-        assert_eq!(with_colon.as_seconds(), 2 * 3600 + 30 * 60);
-
-        let compact = parse_rfc3339_offset("+0230").unwrap();
-        assert_eq!(compact.as_seconds(), 2 * 3600 + 30 * 60);
-
-        let hour_only = parse_rfc3339_offset("-07").unwrap();
-        assert_eq!(hour_only.as_seconds(), -7 * 3600);
-
-        assert!(parse_rfc3339_offset("invalid").is_err());
-    }
-
-    #[test]
-    fn offset_datetime_local_conversion_and_duration() {
-        let date = Date::from_ymd(2021, 1, 2).unwrap();
-        let time = Time::from_hms_nano(3, 4, 5, 999_999_999).unwrap();
-        let offset = UtcOffset::from_hours_minutes(false, 5, 45).unwrap(); // UTC-05:45
-
-        let odt = OffsetDateTime::from_local(date, time, offset).unwrap();
-        assert_eq!(odt.offset, offset);
-
-        let local = odt.to_local().unwrap();
-        assert_eq!(local.date, date);
-        assert_eq!(local.time, time);
-
-        let later = odt.add_duration(Duration::seconds(30)).unwrap();
-        assert_eq!(later.difference(odt), Duration::seconds(30));
-    }
 }
