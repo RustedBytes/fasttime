@@ -1,7 +1,7 @@
 # fasttime
 
 `fasttime` is a small UTC-focused date/time library for Rust. It is built
-around Ben Joffe's constant-time 64-bit days→date algorithm and offers a simple,
+around [Ben Joffe's constant-time 64-bit days→date algorithm](https://www.benjoffe.com/fast-date-64) and offers a simple,
 `no_std`-friendly API for calendar math, parsing, and formatting. The crate
 only depends on `core` by default and enables a handful of conveniences (such as
 `DateTime::now_utc()`) when the optional `std` feature is on.
@@ -63,6 +63,27 @@ fn main() -> Result<(), DateError> {
 
     Ok(())
 }
+```
+
+## Benchmarks
+
+`cargo bench --bench unix_timestamp` runs a Criterion benchmark that compares
+`fasttime::DateTime::from_unix_timestamp` with `time::OffsetDateTime::from_unix_timestamp_nanos`.
+
+### Example output
+
+```
+from_unix_timestamp/fasttime::DateTime
+                        time:   [9.0027 µs 9.0169 µs 9.0311 µs]
+Found 8 outliers among 100 measurements (8.00%)
+  3 (3.00%) low mild
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+from_unix_timestamp/time::OffsetDateTime
+                        time:   [11.872 µs 11.963 µs 12.077 µs]
+Found 11 outliers among 100 measurements (11.00%)
+  3 (3.00%) high mild
+  8 (8.00%) high severe
 ```
 
 ## Development
