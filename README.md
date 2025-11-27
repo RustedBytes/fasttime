@@ -67,8 +67,13 @@ fn main() -> Result<(), DateError> {
 
 ## Benchmarks
 
-`cargo bench --bench unix_timestamp` runs a Criterion benchmark that compares
-`fasttime::DateTime::from_unix_timestamp` with `time::OffsetDateTime::from_unix_timestamp_nanos`.
+`cargo bench --bench unix_timestamp` runs Criterion benchmarks that compare `fasttime` with the `time` crate when converting to and from Unix timestamps:
+- `from_unix_timestamp`: constructor taking `(secs, nanos)`.
+- `to_unix_timestamp`: extracting integral seconds.
+- `to_unix_timestamp_nanos`: extracting nanoseconds as `i128`.
+
+Each group runs the conversions over 64, 1,024, and 16,384 timestamp samples to
+show how performance scales with dataset size.
 
 ### Example output
 
