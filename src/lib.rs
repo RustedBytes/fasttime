@@ -869,4 +869,67 @@ mod tests {
         let odt_z: OffsetDateTime = "2023-11-05T23:59:59Z".parse().unwrap();
         assert_eq!(odt_z.to_string(), "2023-11-05T23:59:59Z");
     }
+
+    #[test]
+    fn date_weekday_and_ordinal() {
+        let monday = Date::from_ymd(2023, 11, 6).unwrap();
+        assert_eq!(monday.weekday(), Weekday::Monday);
+        assert_eq!(monday.ordinal(), 310);
+
+        let leap = Date::from_ymd(2020, 3, 1).unwrap();
+        assert_eq!(leap.weekday(), Weekday::Sunday);
+        assert_eq!(leap.ordinal(), 61);
+    }
+
+    #[test]
+    fn time_fractional_and_nanos() {
+        let t: Time = "12:34:56.123450700".parse().unwrap();
+        assert_eq!(t.nanosecond, 123_450_700);
+        assert_eq!(t.to_string(), "12:34:56.1234507");
+        assert_eq!(t.seconds_since_midnight(), 45_296);
+        assert_eq!(t.nanos_since_midnight(), 45_296_123_450_700);
+    }
+
+    #[test]
+    fn time_parse_rejects_invalid_fraction() {
+        assert!(matches!(
+            "12:00:00.".parse::<Time>(),
+            Err(TimeError::InvalidTime)
+        ));
+        assert!(matches!(
+            "12:00:00.1234567890".parse::<Time>(),
+            Err(TimeError::InvalidTime)
+        ));
+    }
+
+    #[test]
+    fn rfc3339_offset_variants() {
+        let with_colon = parse_rfc3339_offset("+02:30").unwrap();
+        assert_eq!(with_colon.as_seconds(), 2 * 3600 + 30 * 60);
+
+        let compact = parse_rfc3339_offset("+0230").unwrap();
+        assert_eq!(compact.as_seconds(), 2 * 3600 + 30 * 60);
+
+        let hour_only = parse_rfc3339_offset("-07").unwrap();
+        assert_eq!(hour_only.as_seconds(), -7 * 3600);
+
+        assert!(parse_rfc3339_offset("invalid").is_err());
+    }
+
+    #[test]
+    fn offset_datetime_local_conversion_and_duration() {
+        let date = Date::from_ymd(2021, 1, 2).unwrap();
+        let time = Time::from_hms_nano(3, 4, 5, 999_999_999).unwrap();
+        let offset = UtcOffset::from_hours_minutes(false, 5, 45).unwrap(); // UTC-05:45
+
+        let odt = OffsetDateTime::from_local(date, time, offset).unwrap();
+        assert_eq!(odt.offset, offset);
+
+        let local = odt.to_local().unwrap();
+        assert_eq!(local.date, date);
+        assert_eq!(local.time, time);
+
+        let later = odt.add_duration(Duration::seconds(30)).unwrap();
+        assert_eq!(later.difference(odt), Duration::seconds(30));
+    }
 }
