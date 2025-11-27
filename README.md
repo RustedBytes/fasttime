@@ -39,6 +39,10 @@ use fasttime::{
 };
 
 fn main() -> Result<(), DateError> {
+    // Fetch the current UTC date and time, works only with `std` feature.
+    // let now = DateTime::now_utc()?;
+    // println!("Current UTC time: {now}");
+
     // Build calendar dates either from year-month-day or days since the Unix epoch.
     let jan_first = Date::from_ymd(2024, 1, 1)?;
     let epoch = Date::from_days_since_unix_epoch(0)?;
@@ -53,13 +57,9 @@ fn main() -> Result<(), DateError> {
     // Parse ISO/RFC 3339 style strings and work with fixed offsets.
     let parsed_date: Date = "2024-03-15".parse()?;
     let parsed_time: Time = "11:22:33.123".parse().unwrap();
-    let offset = UtcOffset::from_hours_minutes(true, 2, 0)?;
+    let offset = UtcOffset::from_hours_minutes(true, 2, 0).unwrap();
     let local = OffsetDateTime::from_local(parsed_date, parsed_time, offset)?;
     println!("{local} (offset {})", offset);
-
-    // When built with `std`, you can fetch the current UTC timestamp.
-    #[cfg(feature = "std")]
-    println!("Now: {}", DateTime::now_utc()?);
 
     Ok(())
 }
