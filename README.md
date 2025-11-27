@@ -99,4 +99,4 @@ Found 11 outliers among 100 measurements (11.00%)
 
 ## License
 
-Licensed under the Apache License, Version 2.0 (see `Cargo.toml` metadata).
+Licensed under the Apache-2.0
