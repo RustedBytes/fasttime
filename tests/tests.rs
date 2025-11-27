@@ -279,6 +279,41 @@ mod tests {
     }
 
     #[test]
+    fn matches_std_time_reference() {
+        use time::OffsetDateTime as StdOffsetDateTime;
+
+        // Sample a mix of positive/negative timestamps plus some with
+        // non-normalized nanosecond components to stress normalization logic.
+        let samples: &[(i64, i32)] = &[
+            (0, 0),
+            (1, 0),
+            (-1, 0),
+            (86_399, 999_999_999),
+            (-86_400, 0),
+            (1_234_567_890, 987_654_321),
+            (-1_234_567_890, 123_456_789),
+            (50 * 365 * 24 * 60 * 60, 1),
+            (-50 * 365 * 24 * 60 * 60, -250_000_000),
+            (5_000, 1_500_000_000),
+            (-5_000, -1_500_000_000),
+        ];
+
+        for &(secs, nanos) in samples {
+            let fast = DateTime::from_unix_timestamp(secs, nanos).unwrap();
+            let total = (secs as i128) * 1_000_000_000 + nanos as i128;
+            let std_dt = StdOffsetDateTime::from_unix_timestamp_nanos(total).unwrap();
+
+            assert_eq!(fast.date.year, std_dt.year());
+            assert_eq!(fast.date.month, u8::from(std_dt.month()));
+            assert_eq!(fast.date.day, std_dt.day());
+            assert_eq!(fast.time.hour, std_dt.hour());
+            assert_eq!(fast.time.minute, std_dt.minute());
+            assert_eq!(fast.time.second, std_dt.second());
+            assert_eq!(fast.time.nanosecond, std_dt.nanosecond());
+        }
+    }
+
+    #[test]
     fn rfc3339_offset_variants() {
         let with_colon = parse_rfc3339_offset("+02:30").unwrap();
         assert_eq!(with_colon.as_seconds(), 2 * 3600 + 30 * 60);
