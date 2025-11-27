@@ -78,17 +78,50 @@ show how performance scales with dataset size.
 ### Example output
 
 ```
-from_unix_timestamp/fasttime::DateTime
-                        time:   [9.0027 µs 9.0169 µs 9.0311 µs]
-Found 8 outliers among 100 measurements (8.00%)
-  3 (3.00%) low mild
+from_unix_timestamp/fasttime::default-n=1024
+                        time:   [7.5703 µs 7.5711 µs 7.5721 µs]
+                        change: [-4.0811% -4.0481% -4.0177%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  1 (1.00%) high mild
+  6 (6.00%) high severe
+from_unix_timestamp/time::default-n=1024
+                        time:   [8.0240 µs 8.0287 µs 8.0347 µs]
+                        change: [-0.1042% -0.0677% -0.0232%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 9 outliers among 100 measurements (9.00%)
+  3 (3.00%) high mild
+  6 (6.00%) high severe
+
+to_unix_timestamp/fasttime::default-n=1024
+                        time:   [3.2994 µs 3.2996 µs 3.2999 µs]
+                        change: [+0.0822% +0.1046% +0.1245%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) high mild
+  3 (3.00%) high severe
+to_unix_timestamp/time::default-n=1024
+                        time:   [1.8323 µs 1.8326 µs 1.8330 µs]
+                        change: [-0.0536% -0.0195% +0.0093%] (p = 0.24 > 0.05)
+                        No change in performance detected.
+Found 5 outliers among 100 measurements (5.00%)
+  2 (2.00%) high mild
+  3 (3.00%) high severe
+
+to_unix_timestamp_nanos/fasttime::default-n=1024
+                        time:   [3.7286 µs 3.7313 µs 3.7342 µs]
+                        change: [+1.7513% +1.9180% +2.0849%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 5 outliers among 100 measurements (5.00%)
   4 (4.00%) high mild
   1 (1.00%) high severe
-from_unix_timestamp/time::OffsetDateTime
-                        time:   [11.872 µs 11.963 µs 12.077 µs]
-Found 11 outliers among 100 measurements (11.00%)
-  3 (3.00%) high mild
-  8 (8.00%) high severe
+to_unix_timestamp_nanos/time::default-n=1024
+                        time:   [2.0604 µs 2.0607 µs 2.0610 µs]
+                        change: [+0.0420% +0.0554% +0.0703%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 6 outliers among 100 measurements (6.00%)
+  4 (4.00%) high mild
+  2 (2.00%) high severe
 ```
 
 ## Development
