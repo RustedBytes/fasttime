@@ -715,18 +715,25 @@ impl Ord for OffsetDateTime {
 
 // ===== Internal helpers =====
 
-pub fn parse_rfc3339_offset(s: &str) -> Result<UtcOffset, ()> {
+/// Errors parsing an RFC 3339 UTC offset.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rfc3339OffsetError {
+    InvalidFormat,
+    OutOfRange,
+}
+
+pub fn parse_rfc3339_offset(s: &str) -> Result<UtcOffset, Rfc3339OffsetError> {
     if s == "Z" || s == "z" {
-        return UtcOffset::from_seconds(0).map_err(|_| ());
+        return UtcOffset::from_seconds(0).map_err(|_| Rfc3339OffsetError::OutOfRange);
     }
     let bytes = s.as_bytes();
     if bytes.len() < 3 {
-        return Err(());
+        return Err(Rfc3339OffsetError::InvalidFormat);
     }
     let sign_positive = match bytes[0] {
         b'+' => true,
         b'-' => false,
-        _ => return Err(()),
+        _ => return Err(Rfc3339OffsetError::InvalidFormat),
     };
     let body = &s[1..];
     let (h_str, m_str) = if let Some(colon) = body.find(':') {
@@ -736,18 +743,23 @@ pub fn parse_rfc3339_offset(s: &str) -> Result<UtcOffset, ()> {
     } else if body.len() == 4 {
         (&body[..2], &body[2..])
     } else {
-        return Err(());
+        return Err(Rfc3339OffsetError::InvalidFormat);
     };
     if h_str.is_empty() || h_str.len() > 2 || m_str.len() > 2 {
-        return Err(());
+        return Err(Rfc3339OffsetError::InvalidFormat);
     }
-    let hours: u8 = h_str.parse().map_err(|_| ())?;
+    let hours: u8 = h_str
+        .parse()
+        .map_err(|_| Rfc3339OffsetError::InvalidFormat)?;
     let minutes: u8 = if m_str.is_empty() {
         0
     } else {
-        m_str.parse().map_err(|_| ())?
+        m_str
+            .parse()
+            .map_err(|_| Rfc3339OffsetError::InvalidFormat)?
     };
-    UtcOffset::from_hours_minutes(sign_positive, hours, minutes).map_err(|_| ())
+    UtcOffset::from_hours_minutes(sign_positive, hours, minutes)
+        .map_err(|_| Rfc3339OffsetError::OutOfRange)
 }
 
 fn is_leap_year(year: i32) -> bool {
