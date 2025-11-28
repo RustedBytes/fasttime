@@ -1,5 +1,6 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use fasttime::DateTime;
+use std::hint::black_box;
 use time::OffsetDateTime;
 
 // const SAMPLE_SIZES: &[(usize, &str)] = &[(64, "small"), (1024, "default"), (16_384, "large")];
