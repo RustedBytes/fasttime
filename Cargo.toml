@@ -16,7 +16,7 @@ default = ["std"]
 std = []
 
 [dev-dependencies]
-criterion = "0.7"
+criterion = "0.8"
 time = "0.3"
 
 [[bench]]
