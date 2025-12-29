@@ -186,6 +186,9 @@ impl PyDate {
     }
 
     fn __hash__(&self) -> u64 {
+        // Using DefaultHasher is appropriate here. Like Python's hash(),
+        // it provides DOS resistance and only needs to be consistent
+        // within a single process, not across processes or restarts.
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
         let mut hasher = DefaultHasher::new();
@@ -519,7 +522,12 @@ impl PyDateTime {
     fn parse(_cls: &Bound<'_, PyType>, s: &str) -> PyResult<Self> {
         s.parse::<DateTime>()
             .map(PyDateTime)
-            .map_err(|_| PyValueError::new_err("Invalid datetime string"))
+            .map_err(|_| {
+                PyValueError::new_err(format!(
+                    "Invalid datetime string '{}'. Expected format: YYYY-MM-DDTHH:MM:SS[.fffffffff]Z",
+                    s
+                ))
+            })
     }
 
     fn __str__(&self) -> String {
@@ -772,7 +780,12 @@ impl PyOffsetDateTime {
     fn parse(_cls: &Bound<'_, PyType>, s: &str) -> PyResult<Self> {
         s.parse::<OffsetDateTime>()
             .map(PyOffsetDateTime)
-            .map_err(|_| PyValueError::new_err("Invalid offset datetime string"))
+            .map_err(|_| {
+                PyValueError::new_err(format!(
+                    "Invalid offset datetime string '{}'. Expected RFC 3339 format: YYYY-MM-DDTHH:MM:SS[.fffffffff][Z|±HH:MM]",
+                    s
+                ))
+            })
     }
 
     fn __str__(&self) -> String {

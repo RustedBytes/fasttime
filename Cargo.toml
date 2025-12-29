@@ -1,6 +1,8 @@
 [package]
 name = "fasttime"
 version = "0.1.6"
+# Using edition 2021 instead of 2024 for PyO3 compatibility.
+# PyO3 macros generate code that requires unsafe blocks in edition 2024.
 edition = "2021"
 description = "Small UTC date/time library based on Ben Joffe's fast 64-bit date algorithm"
 license = "Apache-2.0"
