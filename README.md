@@ -9,6 +9,8 @@ around [Ben Joffe's constant-time 64-bit days→date algorithm](https://www.benj
 only depends on `core` by default and enables a handful of conveniences (such as
 `DateTime::now_utc()`) when the optional `std` feature is on.
 
+**🐍 Python bindings are now available!** See [PYTHON.md](PYTHON.md) or [python/README.md](python/README.md) for details.
+
 ## Features
 
 - Works in `no_std` environments; opt into `std` when you need wall-clock time.
@@ -18,13 +20,25 @@ only depends on `core` by default and enables a handful of conveniences (such as
 - Fixed-offset RFC 3339 timestamps with nanosecond precision.
 - Simple arithmetic helpers: add days, add durations, compute differences, and
   fetch ordinals or weekdays without extra allocations.
+- **Python 3.10+ bindings** via PyO3 with full type hints and ergonomic API.
 
 ## Installation
+
+### Rust
 
 ```toml
 [dependencies]
 fasttime = "0.1"
 ```
+
+### Python
+
+```bash
+pip install maturin
+maturin develop --release
+```
+
+See [PYTHON.md](PYTHON.md) for Python-specific documentation.
 
 Disable the default `std` feature when targeting bare-metal or embedded
 environments:
