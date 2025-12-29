@@ -1,7 +1,5 @@
 # fasttime for Python
 
-[![PyPI Version](https://img.shields.io/pypi/v/fasttime)](https://pypi.org/project/fasttime/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/fasttime)](https://pypi.org/project/fasttime/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 `fasttime` is a fast, lightweight UTC-focused date/time library for Python, powered by Rust. It provides simple, ergonomic APIs for working with dates, times, and durations with nanosecond precision.
