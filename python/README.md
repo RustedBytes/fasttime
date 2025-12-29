@@ -284,9 +284,3 @@ Licensed under the Apache License, Version 2.0. See [LICENSE](../LICENSE) for de
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Links
-
-- [GitHub Repository](https://github.com/RustedBytes/fasttime)
-- [Rust Documentation](https://docs.rs/fasttime)
-- [PyPI Package](https://pypi.org/project/fasttime/)
