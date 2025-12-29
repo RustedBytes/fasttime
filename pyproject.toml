@@ -1,0 +1,35 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "fasttime"
+version = "0.1.6"
+description = "Fast UTC date/time library with Python bindings"
+readme = "python/README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+keywords = ["date", "time", "datetime", "unix", "calendar", "utc"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/RustedBytes/fasttime"
+Repository = "https://github.com/RustedBytes/fasttime"
+Documentation = "https://github.com/RustedBytes/fasttime/blob/main/python/README.md"
+
+[tool.maturin]
+features = ["pyo3/extension-module", "python", "std"]
+python-source = "python"
+module-name = "fasttime"

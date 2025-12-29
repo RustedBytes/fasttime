@@ -1,2 +1,15 @@
 /target
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.venv/
+venv/
+*.whl
