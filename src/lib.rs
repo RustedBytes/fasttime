@@ -194,6 +194,20 @@ impl Date {
     }
 }
 
+impl PartialOrd for Date {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Date {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let days_self = self.days_since_unix_epoch();
+        let days_other = other.days_since_unix_epoch();
+        days_self.cmp(&days_other)
+    }
+}
+
 impl fmt::Display for Date {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // ISO-like: YYYY-MM-DD with at least 4 digits of year.
@@ -282,6 +296,20 @@ impl Time {
         let minute = (rem / 60) as u8;
         let second = (rem % 60) as u8;
         Time::from_hms_nano(hour, minute, second, nanos)
+    }
+}
+
+impl PartialOrd for Time {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Time {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let nanos_self = self.nanos_since_midnight();
+        let nanos_other = other.nanos_since_midnight();
+        nanos_self.cmp(&nanos_other)
     }
 }
 
@@ -601,6 +629,18 @@ impl UtcOffset {
 
     pub fn is_utc(self) -> bool {
         self.seconds == 0
+    }
+}
+
+impl PartialOrd for UtcOffset {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for UtcOffset {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.seconds.cmp(&other.seconds)
     }
 }
 

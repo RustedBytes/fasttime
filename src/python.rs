@@ -2,13 +2,12 @@
 
 #![cfg(feature = "python")]
 
-use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 
 use crate::{
-    Date, DateError, DateTime, Duration, OffsetDateTime, Rfc3339OffsetError, Time, TimeError,
-    UtcOffset, UtcOffsetError, Weekday as RustWeekday,
+    Date, DateTime, Duration, OffsetDateTime, Time, UtcOffset, Weekday as RustWeekday,
 };
 
 // ===== Weekday =====

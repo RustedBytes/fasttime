@@ -1,7 +1,7 @@
 [package]
 name = "fasttime"
 version = "0.1.6"
-edition = "2024"
+edition = "2021"
 description = "Small UTC date/time library based on Ben Joffe's fast 64-bit date algorithm"
 license = "Apache-2.0"
 repository = "https://github.com/RustedBytes/fasttime"
