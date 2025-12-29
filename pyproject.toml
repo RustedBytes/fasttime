@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "fasttime"
-version = "0.1.6"
+version = "0.2.0"
 description = "Fast UTC date/time library with Python bindings"
 readme = "python/README.md"
 requires-python = ">=3.10"

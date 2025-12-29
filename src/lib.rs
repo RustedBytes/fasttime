@@ -220,25 +220,42 @@ impl FromStr for Date {
 
     /// Parse "YYYY-MM-DD" (no timezone).
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut parts = s.splitn(3, '-');
-        let y = parts
-            .next()
-            .ok_or(DateError::InvalidDate)?
-            .parse::<i32>()
-            .map_err(|_| DateError::InvalidDate)?;
-        let m = parts
-            .next()
-            .ok_or(DateError::InvalidDate)?
-            .parse::<u8>()
-            .map_err(|_| DateError::InvalidDate)?;
-        let d = parts
-            .next()
-            .ok_or(DateError::InvalidDate)?
-            .parse::<u8>()
-            .map_err(|_| DateError::InvalidDate)?;
-        if parts.next().is_some() {
+        let bytes = s.as_bytes();
+        if bytes.is_empty() {
             return Err(DateError::InvalidDate);
         }
+
+        let mut start = 0;
+        if bytes[0] == b'+' || bytes[0] == b'-' {
+            start = 1;
+            if start == bytes.len() {
+                return Err(DateError::InvalidDate);
+            }
+        }
+
+        let mut first = None;
+        let mut second = None;
+        for i in start..bytes.len() {
+            if bytes[i] == b'-' {
+                if first.is_none() {
+                    first = Some(i);
+                } else if second.is_none() {
+                    second = Some(i);
+                } else {
+                    return Err(DateError::InvalidDate);
+                }
+            }
+        }
+
+        let (first, second) = match (first, second) {
+            (Some(first), Some(second)) => (first, second),
+            _ => return Err(DateError::InvalidDate),
+        };
+
+        let y = parse_i32_bytes(&bytes[..first]).ok_or(DateError::InvalidDate)?;
+        let m =
+            parse_u32_bytes(&bytes[first + 1..second], 12).ok_or(DateError::InvalidDate)? as u8;
+        let d = parse_u32_bytes(&bytes[second + 1..], 31).ok_or(DateError::InvalidDate)? as u8;
         Date::from_ymd(y, m, d)
     }
 }
@@ -345,49 +362,40 @@ impl FromStr for Time {
 
     /// Parse "HH:MM:SS[.fffffffff]".
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (hms, frac) = match s.split_once('.') {
-            Some((h, f)) => (h, Some(f)),
-            None => (s, None),
+        let bytes = s.as_bytes();
+        let (hms_bytes, frac_bytes) = match bytes.iter().position(|&b| b == b'.') {
+            Some(idx) => (&bytes[..idx], Some(&bytes[idx + 1..])),
+            None => (bytes, None),
         };
-        let mut parts = hms.splitn(3, ':');
-        let h = parts
-            .next()
-            .ok_or(TimeError::InvalidTime)?
-            .parse::<u8>()
-            .map_err(|_| TimeError::InvalidTime)?;
-        let m = parts
-            .next()
-            .ok_or(TimeError::InvalidTime)?
-            .parse::<u8>()
-            .map_err(|_| TimeError::InvalidTime)?;
-        let sec = parts
-            .next()
-            .ok_or(TimeError::InvalidTime)?
-            .parse::<u8>()
-            .map_err(|_| TimeError::InvalidTime)?;
-        if parts.next().is_some() {
-            return Err(TimeError::InvalidTime);
-        }
 
-        let nanos = if let Some(fr) = frac {
-            if fr.is_empty() || fr.len() > 9 {
-                return Err(TimeError::InvalidTime);
-            }
-            // Interpret fractional seconds with up to 9 digits, padding
-            // with zeros on the right.
-            let mut nanos: u32 = 0;
-            let mut factor: u32 = 100_000_000; // 10^(9-1)
-            for ch in fr.chars() {
-                if !ch.is_ascii_digit() {
+        let mut first = None;
+        let mut second = None;
+        for (i, &b) in hms_bytes.iter().enumerate() {
+            if b == b':' {
+                if first.is_none() {
+                    first = Some(i);
+                } else if second.is_none() {
+                    second = Some(i);
+                } else {
                     return Err(TimeError::InvalidTime);
                 }
-                let digit = (ch as u8 - b'0') as u32;
-                nanos = nanos
-                    .checked_add(digit * factor)
-                    .ok_or(TimeError::InvalidTime)?;
-                factor /= 10;
             }
-            nanos
+        }
+
+        let (first, second) = match (first, second) {
+            (Some(first), Some(second)) => (first, second),
+            _ => return Err(TimeError::InvalidTime),
+        };
+
+        let h =
+            parse_u32_bytes(&hms_bytes[..first], 23).ok_or(TimeError::InvalidTime)? as u8;
+        let m = parse_u32_bytes(&hms_bytes[first + 1..second], 59)
+            .ok_or(TimeError::InvalidTime)? as u8;
+        let sec = parse_u32_bytes(&hms_bytes[second + 1..], 59)
+            .ok_or(TimeError::InvalidTime)? as u8;
+
+        let nanos = if let Some(fr) = frac_bytes {
+            parse_fraction_nanos(fr).ok_or(TimeError::InvalidTime)?
         } else {
             0
         };
@@ -763,6 +771,94 @@ impl Ord for OffsetDateTime {
 
 // ===== Internal helpers =====
 
+const POW10_U32: [u32; 10] = [
+    1,
+    10,
+    100,
+    1_000,
+    10_000,
+    100_000,
+    1_000_000,
+    10_000_000,
+    100_000_000,
+    1_000_000_000,
+];
+
+fn parse_i32_bytes(bytes: &[u8]) -> Option<i32> {
+    if bytes.is_empty() {
+        return None;
+    }
+    let mut idx = 0;
+    let mut neg = false;
+    match bytes[0] {
+        b'+' => idx = 1,
+        b'-' => {
+            idx = 1;
+            neg = true;
+        }
+        _ => {}
+    }
+    if idx == bytes.len() {
+        return None;
+    }
+
+    let limit: i64 = if neg {
+        i32::MAX as i64 + 1
+    } else {
+        i32::MAX as i64
+    };
+    let mut val: i64 = 0;
+    for &b in &bytes[idx..] {
+        if b < b'0' || b > b'9' {
+            return None;
+        }
+        let digit = (b - b'0') as i64;
+        if val > limit / 10 || (val == limit / 10 && digit > limit % 10) {
+            return None;
+        }
+        val = val * 10 + digit;
+    }
+
+    if neg {
+        val = -val;
+    }
+    Some(val as i32)
+}
+
+fn parse_u32_bytes(bytes: &[u8], max: u32) -> Option<u32> {
+    if bytes.is_empty() {
+        return None;
+    }
+    let mut val: u32 = 0;
+    for &b in bytes {
+        if b < b'0' || b > b'9' {
+            return None;
+        }
+        let digit = (b - b'0') as u32;
+        if val > max / 10 || (val == max / 10 && digit > max % 10) {
+            return None;
+        }
+        val = val * 10 + digit;
+    }
+    Some(val)
+}
+
+fn parse_fraction_nanos(bytes: &[u8]) -> Option<u32> {
+    let len = bytes.len();
+    if len == 0 || len > 9 {
+        return None;
+    }
+    let mut val: u32 = 0;
+    for &b in bytes {
+        if b < b'0' || b > b'9' {
+            return None;
+        }
+        val = val * 10 + (b - b'0') as u32;
+    }
+    let scale = 9 - len;
+    Some(val * POW10_U32[scale])
+}
+
 /// Errors parsing an RFC 3339 UTC offset.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rfc3339OffsetError {
@@ -783,28 +879,40 @@ pub fn parse_rfc3339_offset(s: &str) -> Result<UtcOffset, Rfc3339OffsetError> {
         b'-' => false,
         _ => return Err(Rfc3339OffsetError::InvalidFormat),
     };
-    let body = &s[1..];
-    let (h_str, m_str) = if let Some(colon) = body.find(':') {
-        (&body[..colon], &body[colon + 1..])
+    let body = &bytes[1..];
+
+    let mut colon = None;
+    for (idx, &b) in body.iter().enumerate() {
+        if b == b':' {
+            colon = Some(idx);
+            break;
+        }
+    }
+
+    let (h_bytes, m_bytes) = if let Some(colon_idx) = colon {
+        let h = &body[..colon_idx];
+        let m = &body[colon_idx + 1..];
+        if h.is_empty() || h.len() > 2 || m.len() > 2 {
+            return Err(Rfc3339OffsetError::InvalidFormat);
+        }
+        (h, m)
     } else if body.len() == 2 {
-        (&body[..2], "0")
+        (&body[..2], &[][..])
     } else if body.len() == 4 {
         (&body[..2], &body[2..])
     } else {
         return Err(Rfc3339OffsetError::InvalidFormat);
     };
-    if h_str.is_empty() || h_str.len() > 2 || m_str.len() > 2 {
+
+    if h_bytes.len() > 2 || m_bytes.len() > 2 {
         return Err(Rfc3339OffsetError::InvalidFormat);
     }
-    let hours: u8 = h_str
-        .parse()
-        .map_err(|_| Rfc3339OffsetError::InvalidFormat)?;
-    let minutes: u8 = if m_str.is_empty() {
+
+    let hours = parse_u32_bytes(h_bytes, 99).ok_or(Rfc3339OffsetError::InvalidFormat)? as u8;
+    let minutes = if m_bytes.is_empty() {
         0
     } else {
-        m_str
-            .parse()
-            .map_err(|_| Rfc3339OffsetError::InvalidFormat)?
+        parse_u32_bytes(m_bytes, 99).ok_or(Rfc3339OffsetError::InvalidFormat)? as u8
     };
     UtcOffset::from_hours_minutes(sign_positive, hours, minutes)
         .map_err(|_| Rfc3339OffsetError::OutOfRange)
