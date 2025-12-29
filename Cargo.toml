@@ -12,13 +12,12 @@ documentation = "https://docs.rs/fasttime"
 
 [lib]
 name = "fasttime"
-crate-type = ["rlib", "cdylib"]
 
 [features]
 # std is on by default; turn it off for no_std environments.
 default = ["std"]
 std = []
-python = ["pyo3"]
+python = ["pyo3", "std"]
 
 [dependencies]
 pyo3 = { version = "0.27", optional = true }

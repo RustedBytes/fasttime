@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
 
 //! fasttime — small UTC date/time library built around Ben Joffe's
 //! fast 64-bit days→date algorithm.

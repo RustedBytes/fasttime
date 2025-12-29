@@ -9,7 +9,7 @@ around [Ben Joffe's constant-time 64-bit days→date algorithm](https://www.benj
 only depends on `core` by default and enables a handful of conveniences (such as
 `DateTime::now_utc()`) when the optional `std` feature is on.
 
-**🐍 Python bindings are now available!** See [PYTHON.md](PYTHON.md) or [python/README.md](python/README.md) for details.
+**🐍 Python bindings are now available!** See [python/README.md](python/README.md) for details.
 
 ## Features
 
@@ -37,8 +37,6 @@ fasttime = "0.1"
 pip install maturin
 maturin develop --release
 ```
-
-See [PYTHON.md](PYTHON.md) for Python-specific documentation.
 
 Disable the default `std` feature when targeting bare-metal or embedded
 environments:
