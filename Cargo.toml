@@ -10,10 +10,18 @@ keywords = ["date", "time", "datetime", "unix", "calendar"]
 categories = ["date-and-time"]
 documentation = "https://docs.rs/fasttime"
 
+[lib]
+name = "fasttime"
+crate-type = ["rlib", "cdylib"]
+
 [features]
 # std is on by default; turn it off for no_std environments.
 default = ["std"]
 std = []
+python = ["pyo3"]
+
+[dependencies]
+pyo3 = { version = "0.22", optional = true }
 
 [dev-dependencies]
 criterion = "0.8"

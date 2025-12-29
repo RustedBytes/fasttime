@@ -15,10 +15,18 @@
 //!   - `DateTime` (UTC): "YYYY-MM-DDTHH:MM:SS[.fffffffff]Z"
 //!   - `OffsetDateTime`: "YYYY-MM-DDTHH:MM:SS[.fffffffff][Z|±HH:MM]" (RFC 3339 subset).
 //! - `DateTime::now_utc()` when the `std` feature is enabled.
+//!
+//! ## Python Bindings
+//!
+//! When built with the `python` feature, this crate provides Python bindings via PyO3.
+//! See the `python/` directory for examples and documentation.
 
 use core::cmp::Ordering;
 use core::fmt;
 use core::str::FromStr;
+
+#[cfg(feature = "python")]
+mod python;
 
 /// Calendar weekday (ISO order, Monday = 1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
