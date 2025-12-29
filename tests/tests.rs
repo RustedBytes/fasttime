@@ -3,8 +3,8 @@
 #[cfg(test)]
 mod tests {
     use fasttime::{
-        Date, DateError, DateTime, Duration, OffsetDateTime, Time, TimeError, UtcOffset, Weekday,
-        parse_rfc3339_offset,
+        parse_rfc3339_offset, Date, DateError, DateTime, Duration, OffsetDateTime, Time, TimeError,
+        UtcOffset, Weekday,
     };
 
     #[test]

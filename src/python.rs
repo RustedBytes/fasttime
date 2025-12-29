@@ -6,9 +6,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 
-use crate::{
-    Date, DateTime, Duration, OffsetDateTime, Time, UtcOffset, Weekday as RustWeekday,
-};
+use crate::{Date, DateTime, Duration, OffsetDateTime, Time, UtcOffset, Weekday as RustWeekday};
 
 // ===== Weekday =====
 
@@ -520,14 +518,12 @@ impl PyDateTime {
     #[classmethod]
     #[pyo3(name = "parse")]
     fn parse(_cls: &Bound<'_, PyType>, s: &str) -> PyResult<Self> {
-        s.parse::<DateTime>()
-            .map(PyDateTime)
-            .map_err(|_| {
-                PyValueError::new_err(format!(
-                    "Invalid datetime string '{}'. Expected format: YYYY-MM-DDTHH:MM:SS[.fffffffff]Z",
-                    s
-                ))
-            })
+        s.parse::<DateTime>().map(PyDateTime).map_err(|_| {
+            PyValueError::new_err(format!(
+                "Invalid datetime string '{}'. Expected format: YYYY-MM-DDTHH:MM:SS[.fffffffff]Z",
+                s
+            ))
+        })
     }
 
     fn __str__(&self) -> String {

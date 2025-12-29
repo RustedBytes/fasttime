@@ -235,8 +235,8 @@ impl FromStr for Date {
 
         let mut first = None;
         let mut second = None;
-        for i in start..bytes.len() {
-            if bytes[i] == b'-' {
+        for (i, &b) in bytes.iter().enumerate().skip(start) {
+            if b == b'-' {
                 if first.is_none() {
                     first = Some(i);
                 } else if second.is_none() {
@@ -253,8 +253,7 @@ impl FromStr for Date {
         };
 
         let y = parse_i32_bytes(&bytes[..first]).ok_or(DateError::InvalidDate)?;
-        let m =
-            parse_u32_bytes(&bytes[first + 1..second], 12).ok_or(DateError::InvalidDate)? as u8;
+        let m = parse_u32_bytes(&bytes[first + 1..second], 12).ok_or(DateError::InvalidDate)? as u8;
         let d = parse_u32_bytes(&bytes[second + 1..], 31).ok_or(DateError::InvalidDate)? as u8;
         Date::from_ymd(y, m, d)
     }
@@ -387,12 +386,11 @@ impl FromStr for Time {
             _ => return Err(TimeError::InvalidTime),
         };
 
-        let h =
-            parse_u32_bytes(&hms_bytes[..first], 23).ok_or(TimeError::InvalidTime)? as u8;
-        let m = parse_u32_bytes(&hms_bytes[first + 1..second], 59)
-            .ok_or(TimeError::InvalidTime)? as u8;
-        let sec = parse_u32_bytes(&hms_bytes[second + 1..], 59)
-            .ok_or(TimeError::InvalidTime)? as u8;
+        let h = parse_u32_bytes(&hms_bytes[..first], 23).ok_or(TimeError::InvalidTime)? as u8;
+        let m =
+            parse_u32_bytes(&hms_bytes[first + 1..second], 59).ok_or(TimeError::InvalidTime)? as u8;
+        let sec =
+            parse_u32_bytes(&hms_bytes[second + 1..], 59).ok_or(TimeError::InvalidTime)? as u8;
 
         let nanos = if let Some(fr) = frac_bytes {
             parse_fraction_nanos(fr).ok_or(TimeError::InvalidTime)?
@@ -809,7 +807,7 @@ fn parse_i32_bytes(bytes: &[u8]) -> Option<i32> {
     };
     let mut val: i64 = 0;
     for &b in &bytes[idx..] {
-        if b < b'0' || b > b'9' {
+        if !b.is_ascii_digit() {
             return None;
         }
         let digit = (b - b'0') as i64;
@@ -831,7 +829,7 @@ fn parse_u32_bytes(bytes: &[u8], max: u32) -> Option<u32> {
     }
     let mut val: u32 = 0;
     for &b in bytes {
-        if b < b'0' || b > b'9' {
+        if !b.is_ascii_digit() {
             return None;
         }
         let digit = (b - b'0') as u32;
@@ -850,7 +848,7 @@ fn parse_fraction_nanos(bytes: &[u8]) -> Option<u32> {
     }
     let mut val: u32 = 0;
     for &b in bytes {
-        if b < b'0' || b > b'9' {
+        if !b.is_ascii_digit() {
             return None;
         }
         val = val * 10 + (b - b'0') as u32;
