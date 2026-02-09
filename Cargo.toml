@@ -20,7 +20,7 @@ std = []
 python = ["pyo3", "std"]
 
 [dependencies]
-pyo3 = { version = "0.27", optional = true }
+pyo3 = { version = "0.28", optional = true }
 
 [dev-dependencies]
 criterion = "0.8"
