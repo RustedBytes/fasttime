@@ -94,49 +94,31 @@ show how performance scales with dataset size.
 
 ```
 from_unix_timestamp/fasttime::default-n=1024
-                        time:   [7.5703 µs 7.5711 µs 7.5721 µs]
-                        change: [-4.0811% -4.0481% -4.0177%] (p = 0.00 < 0.05)
+                        time:   [6.3467 µs 6.3469 µs 6.3477 µs]
+                        change: [−1.4378% −1.2789% −1.1195%] (p = 0.05 < 0.05)
                         Performance has improved.
-Found 7 outliers among 100 measurements (7.00%)
-  1 (1.00%) high mild
-  6 (6.00%) high severe
 from_unix_timestamp/time::default-n=1024
-                        time:   [8.0240 µs 8.0287 µs 8.0347 µs]
-                        change: [-0.1042% -0.0677% -0.0232%] (p = 0.00 < 0.05)
-                        Change within noise threshold.
-Found 9 outliers among 100 measurements (9.00%)
-  3 (3.00%) high mild
-  6 (6.00%) high severe
+                        time:   [8.4668 µs 8.4721 µs 8.4931 µs]
+                        change: [−0.1704% +0.3153% +0.8043%] (p = 0.53 > 0.05)
+                        No change in performance detected.
 
 to_unix_timestamp/fasttime::default-n=1024
-                        time:   [3.2994 µs 3.2996 µs 3.2999 µs]
-                        change: [+0.0822% +0.1046% +0.1245%] (p = 0.00 < 0.05)
-                        Change within noise threshold.
-Found 7 outliers among 100 measurements (7.00%)
-  4 (4.00%) high mild
-  3 (3.00%) high severe
-to_unix_timestamp/time::default-n=1024
-                        time:   [1.8323 µs 1.8326 µs 1.8330 µs]
-                        change: [-0.0536% -0.0195% +0.0093%] (p = 0.24 > 0.05)
+                        time:   [2.5204 µs 2.5243 µs 2.5396 µs]
+                        change: [+0.0014% +0.4439% +0.8869%] (p = 0.13 > 0.05)
                         No change in performance detected.
-Found 5 outliers among 100 measurements (5.00%)
-  2 (2.00%) high mild
-  3 (3.00%) high severe
+to_unix_timestamp/time::default-n=1024
+                        time:   [1.8468 µs 1.8473 µs 1.8493 µs]
+                        change: [−0.7073% −0.4740% −0.2400%] (p = 0.09 > 0.05)
+                        No change in performance detected.
 
 to_unix_timestamp_nanos/fasttime::default-n=1024
-                        time:   [3.7286 µs 3.7313 µs 3.7342 µs]
-                        change: [+1.7513% +1.9180% +2.0849%] (p = 0.00 < 0.05)
-                        Performance has regressed.
-Found 5 outliers among 100 measurements (5.00%)
-  4 (4.00%) high mild
-  1 (1.00%) high severe
+                        time:   [2.8136 µs 2.8177 µs 2.8344 µs]
+                        change: [−0.2091% +0.2768% +0.7638%] (p = 0.64 > 0.05)
+                        No change in performance detected.
 to_unix_timestamp_nanos/time::default-n=1024
-                        time:   [2.0604 µs 2.0607 µs 2.0610 µs]
-                        change: [+0.0420% +0.0554% +0.0703%] (p = 0.00 < 0.05)
-                        Change within noise threshold.
-Found 6 outliers among 100 measurements (6.00%)
-  4 (4.00%) high mild
-  2 (2.00%) high severe
+                        time:   [2.0668 µs 2.0694 µs 2.0796 µs]
+                        change: [−1.4219% −0.8436% −0.2622%] (p = 0.10 > 0.05)
+                        No change in performance detected.
 ```
 
 ## Development
