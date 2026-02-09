@@ -327,6 +327,62 @@ mod tests {
         assert!(parse_rfc3339_offset("invalid").is_err());
     }
 
+    #[test]
+    fn leap_year_matches_reference_formula() {
+        for year in -20_000..=20_000 {
+            let reference = is_leap_year(year);
+            let fasttime_accepts_feb_29 = Date::from_ymd(year, 2, 29).is_ok();
+            assert_eq!(
+                fasttime_accepts_feb_29, reference,
+                "Mismatch for year {year}"
+            );
+        }
+    }
+
+    #[test]
+    fn month_lengths_match_reference() {
+        let years = [
+            i32::MIN,
+            -4_000,
+            -2_100,
+            -2_000,
+            -1,
+            0,
+            1,
+            1_900,
+            2_000,
+            2_024,
+            2_100,
+            4_000,
+            i32::MAX,
+        ];
+
+        for &year in &years {
+            for month in 1..=12 {
+                let expected = match month {
+                    2 => {
+                        if is_leap_year(year) {
+                            29
+                        } else {
+                            28
+                        }
+                    }
+                    4 | 6 | 9 | 11 => 30,
+                    _ => 31,
+                };
+
+                assert!(
+                    Date::from_ymd(year, month, expected).is_ok(),
+                    "Expected valid end-of-month for {year:04}-{month:02}"
+                );
+                assert!(
+                    Date::from_ymd(year, month, expected + 1).is_err(),
+                    "Expected invalid overflow day for {year:04}-{month:02}"
+                );
+            }
+        }
+    }
+
     // Helper needed for the test logic (copy of internal helper)
     fn is_leap_year(year: i32) -> bool {
         (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)

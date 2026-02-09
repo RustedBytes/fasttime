@@ -150,8 +150,8 @@ impl Date {
 
     /// Convert to days since Unix epoch (1970-01-01 = 0).
     ///
-    /// This uses Howard Hinnant's well-known constant-time civil→days
-    /// algorithm, which is exact for the proleptic Gregorian calendar.
+    /// This uses a modified Neri-Schneider inverse civil→days formula
+    /// (as described by Ben Joffe), exact for the proleptic Gregorian calendar.
     pub fn days_since_unix_epoch(self) -> i64 {
         days_from_civil(self.year, self.month, self.day)
     }
@@ -917,35 +917,35 @@ pub fn parse_rfc3339_offset(s: &str) -> Result<UtcOffset, Rfc3339OffsetError> {
 }
 
 fn is_leap_year(year: i32) -> bool {
-    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+    let century_candidate = year % 25 == 0;
+    (year & if century_candidate { 15 } else { 3 }) == 0
 }
 
 fn days_in_month(year: i32, month: u8) -> u8 {
-    match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 => {
-            if is_leap_year(year) {
-                29
-            } else {
-                28
-            }
-        }
-        _ => 0,
+    if month == 2 {
+        return if is_leap_year(year) { 29 } else { 28 };
     }
+    if !(1..=12).contains(&month) {
+        return 0;
+    }
+    // Branch-free month length for all non-February months.
+    (month ^ (month >> 3)) | 30
 }
 
-// Howard Hinnant's civil-from-days/inverse algorithm.
+// Modified Neri-Schneider inverse (civil → days), as documented by Ben Joffe.
 // Returns days since Unix epoch for a given Gregorian date.
 fn days_from_civil(y: i32, m: u8, d: u8) -> i64 {
-    let y = y as i64;
-    let m = m as i64;
-    let d = d as i64;
-    let y0 = y - if m <= 2 { 1 } else { 0 };
-    let era = if y0 >= 0 { y0 / 400 } else { (y0 - 399) / 400 };
-    let yoe = y0 - era * 400; // [0, 399]
-    let mp = m + if m > 2 { -3 } else { 9 }; // March=0,...,Feb=11
-    let doy = (153 * mp + 2) / 5 + d - 1; // [0, 365]
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy; // [0, 146096]
-    era * 146_097 + doe - 719_468
+    // Large enough so shifted years are non-negative for the full i32 range.
+    const S: i64 = 5_368_710;
+    const YEAR_SHIFT: i64 = 400 * S;
+    const RATA_SHIFT: i64 = 719_468 + 146_097 * S + 1;
+
+    let bump = m <= 2;
+    let year = y as i64 + YEAR_SHIFT - if bump { 1 } else { 0 };
+    let cent = year / 100;
+    let phase = if bump { 8_829 } else { -2_919 };
+
+    let y_days = year * 365 + year / 4 - cent + cent / 4;
+    let m_days = (979 * (m as i64) + phase) / 32;
+    y_days + m_days + d as i64 - RATA_SHIFT
 }
