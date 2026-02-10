@@ -269,7 +269,10 @@ mod tests {
 
         // After exactly one 400-year cycle, we should land on 2400-01-01.
         let after_cycle = Date::from_days_since_unix_epoch(days_accum).unwrap();
-        assert_eq!((after_cycle.year, after_cycle.month, after_cycle.day), (2400, 1, 1));
+        assert_eq!(
+            (after_cycle.year, after_cycle.month, after_cycle.day),
+            (2400, 1, 1)
+        );
     }
 
     /// Test 5: Negative Unix Timestamps (Pre-1970)
@@ -303,7 +306,12 @@ mod tests {
             let got = Date::from_days_since_unix_epoch(days).unwrap();
             let std_dt = StdOffsetDateTime::from_unix_timestamp(days * 86_400).unwrap();
             assert_eq!(got.year, std_dt.year(), "Year mismatch at day {}", days);
-            assert_eq!(got.month, u8::from(std_dt.month()), "Month mismatch at day {}", days);
+            assert_eq!(
+                got.month,
+                u8::from(std_dt.month()),
+                "Month mismatch at day {}",
+                days
+            );
             assert_eq!(got.day, std_dt.day(), "Day mismatch at day {}", days);
         }
     }
