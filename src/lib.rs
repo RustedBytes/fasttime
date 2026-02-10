@@ -152,6 +152,7 @@ impl Date {
     ///
     /// This uses a modified Neri-Schneider inverse civil→days formula
     /// (as described by Ben Joffe), exact for the proleptic Gregorian calendar.
+    #[inline]
     pub fn days_since_unix_epoch(self) -> i64 {
         days_from_civil(self.year, self.month, self.day)
     }
@@ -293,11 +294,13 @@ impl Time {
     }
 
     /// Total seconds since midnight (ignores nanoseconds).
+    #[inline]
     pub fn seconds_since_midnight(self) -> u32 {
         (self.hour as u32) * 3600 + (self.minute as u32) * 60 + (self.second as u32)
     }
 
     /// Total nanoseconds since midnight.
+    #[inline]
     pub fn nanos_since_midnight(self) -> u64 {
         self.seconds_since_midnight() as u64 * 1_000_000_000 + self.nanosecond as u64
     }
@@ -510,6 +513,7 @@ impl DateTime {
     }
 
     /// Seconds since Unix epoch (1970-01-01T00:00:00Z).
+    #[inline]
     pub fn unix_timestamp(self) -> i64 {
         let days = self.date.days_since_unix_epoch();
         let day_secs = self.time.seconds_since_midnight() as i64;
@@ -517,6 +521,7 @@ impl DateTime {
     }
 
     /// Nanoseconds since Unix epoch, as i128.
+    #[inline]
     pub fn unix_timestamp_nanos(self) -> i128 {
         self.unix_timestamp() as i128 * 1_000_000_000 + self.time.nanosecond as i128
     }
@@ -934,6 +939,7 @@ fn days_in_month(year: i32, month: u8) -> u8 {
 
 // Modified Neri-Schneider inverse (civil → days), as documented by Ben Joffe.
 // Returns days since Unix epoch for a given Gregorian date.
+#[inline]
 fn days_from_civil(y: i32, m: u8, d: u8) -> i64 {
     // Large enough so shifted years are non-negative for the full i32 range.
     const S: i64 = 5_368_710;

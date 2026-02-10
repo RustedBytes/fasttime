@@ -82,42 +82,41 @@ fn main() -> Result<(), DateError> {
 
 ## Benchmarks
 
-`cargo bench --bench unix_timestamp` runs Criterion benchmarks that compare `fasttime` with the `time` crate when converting to and from Unix timestamps:
+`cargo bench --bench unix_timestamp -- --quick` runs a quick benchmark comparing `fasttime`'s Unix timestamp conversions to the widely used `time` crate. 
+
+The benchmark covers three operations:
 - `from_unix_timestamp`: constructor taking `(secs, nanos)`.
 - `to_unix_timestamp`: extracting integral seconds.
 - `to_unix_timestamp_nanos`: extracting nanoseconds as `i128`.
-
-Each group runs the conversions over 64, 1,024, and 16,384 timestamp samples to
-show how performance scales with dataset size.
 
 ### Example output
 
 ```
 from_unix_timestamp/fasttime::default-n=1024
-                        time:   [6.3467 µs 6.3469 µs 6.3477 µs]
-                        change: [−1.4378% −1.2789% −1.1195%] (p = 0.05 < 0.05)
-                        Performance has improved.
+                        time:   [6.3503 µs 6.3531 µs 6.3642 µs]
+                        change: [−0.1416% +0.3450% +0.8352%] (p = 0.56 > 0.05)
+                        No change in performance detected.
 from_unix_timestamp/time::default-n=1024
-                        time:   [8.4668 µs 8.4721 µs 8.4931 µs]
-                        change: [−0.1704% +0.3153% +0.8043%] (p = 0.53 > 0.05)
+                        time:   [8.4149 µs 8.4183 µs 8.4318 µs]
+                        change: [−1.5616% −1.4042% −1.2466%] (p = 0.06 > 0.05)
                         No change in performance detected.
 
 to_unix_timestamp/fasttime::default-n=1024
-                        time:   [2.5204 µs 2.5243 µs 2.5396 µs]
-                        change: [+0.0014% +0.4439% +0.8869%] (p = 0.13 > 0.05)
+                        time:   [1.6900 µs 1.6926 µs 1.7030 µs]
+                        change: [−0.7572% −0.3115% +0.1347%] (p = 0.70 > 0.05)
                         No change in performance detected.
 to_unix_timestamp/time::default-n=1024
-                        time:   [1.8468 µs 1.8473 µs 1.8493 µs]
-                        change: [−0.7073% −0.4740% −0.2400%] (p = 0.09 > 0.05)
+                        time:   [1.8548 µs 1.8553 µs 1.8573 µs]
+                        change: [+0.1762% +0.3302% +0.4845%] (p = 0.10 > 0.05)
                         No change in performance detected.
 
 to_unix_timestamp_nanos/fasttime::default-n=1024
-                        time:   [2.8136 µs 2.8177 µs 2.8344 µs]
-                        change: [−0.2091% +0.2768% +0.7638%] (p = 0.64 > 0.05)
+                        time:   [1.9964 µs 1.9976 µs 2.0025 µs]
+                        change: [−0.4830% −0.2388% +0.0059%] (p = 0.20 > 0.05)
                         No change in performance detected.
 to_unix_timestamp_nanos/time::default-n=1024
-                        time:   [2.0668 µs 2.0694 µs 2.0796 µs]
-                        change: [−1.4219% −0.8436% −0.2622%] (p = 0.10 > 0.05)
+                        time:   [2.0733 µs 2.0767 µs 2.0775 µs]
+                        change: [−0.0164% +0.1895% +0.3958%] (p = 0.24 > 0.05)
                         No change in performance detected.
 ```
 
