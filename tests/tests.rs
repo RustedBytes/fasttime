@@ -231,29 +231,45 @@ mod tests {
     #[test]
     fn test_full_400_year_cycle() {
         // Start from an arbitrary date, e.g., 2000-01-01
-        let start_year = 2000;
+        let start_year = 2000i32;
         let mut days_accum = Date::from_ymd(start_year, 1, 1)
             .unwrap()
             .days_since_unix_epoch();
 
-        // Loop through exactly 400 years
-        for y in start_year..(start_year + 400) {
-            let leap = is_leap_year(y);
-            let limit = if leap { 366 } else { 365 };
+        // Track an expected Gregorian date with independent step logic.
+        let mut exp_year = start_year;
+        let mut exp_month = 1u8;
+        let mut exp_day = 1u8;
 
-            for _ in 0..limit {
-                // Decode using the fast algorithm
-                let date = Date::from_days_since_unix_epoch(days_accum).unwrap();
+        // One full Gregorian cycle = 146,097 days.
+        for _ in 0..146_097 {
+            let date = Date::from_days_since_unix_epoch(days_accum).unwrap();
+            assert_eq!(
+                (date.year, date.month, date.day),
+                (exp_year, exp_month, exp_day),
+                "Date mismatch at days {}",
+                days_accum
+            );
 
-                // Assert year matches loop
-                assert_eq!(date.year, y, "Year mismatch at days {}", days_accum);
-
-                // Validates that the fast algorithm produced a valid date (1..12, 1..31)
-                // Implicitly checked by `unwrap` above which returns valid struct
-
-                days_accum += 1;
+            // Increment expected date by one day.
+            let dim = reference_days_in_month(exp_year, exp_month);
+            if exp_day < dim {
+                exp_day += 1;
+            } else {
+                exp_day = 1;
+                if exp_month < 12 {
+                    exp_month += 1;
+                } else {
+                    exp_month = 1;
+                    exp_year += 1;
+                }
             }
+            days_accum += 1;
         }
+
+        // After exactly one 400-year cycle, we should land on 2400-01-01.
+        let after_cycle = Date::from_days_since_unix_epoch(days_accum).unwrap();
+        assert_eq!((after_cycle.year, after_cycle.month, after_cycle.day), (2400, 1, 1));
     }
 
     /// Test 5: Negative Unix Timestamps (Pre-1970)
@@ -261,21 +277,35 @@ mod tests {
     /// We verify this doesn't break near the Unix epoch boundary.
     #[test]
     fn test_negative_epoch_crossing() {
-        // 1970-01-01 is day 0
-        // 1969-12-31 is day -1
-        let d_zero = Date::from_days_since_unix_epoch(0).unwrap();
-        assert_eq!(d_zero.year, 1970);
-        assert_eq!(d_zero.month, 1);
-        assert_eq!(d_zero.day, 1);
+        use time::OffsetDateTime as StdOffsetDateTime;
 
-        let d_neg = Date::from_days_since_unix_epoch(-1).unwrap();
-        assert_eq!(d_neg.year, 1969);
-        assert_eq!(d_neg.month, 12);
-        assert_eq!(d_neg.day, 31);
+        // Exact expectations around the epoch boundary.
+        let around_epoch = [
+            (-2, (1969, 12, 30)),
+            (-1, (1969, 12, 31)),
+            (0, (1970, 1, 1)),
+            (1, (1970, 1, 2)),
+            (2, (1970, 1, 3)),
+        ];
+        for (days, (y, m, d)) in around_epoch {
+            let got = Date::from_days_since_unix_epoch(days).unwrap();
+            assert_eq!(
+                (got.year, got.month, got.day),
+                (y, m, d),
+                "Epoch-neighbor mismatch at day {}",
+                days
+            );
+        }
 
-        let d_neg_deep = Date::from_days_since_unix_epoch(-10000).unwrap();
-        // Just verify it doesn't panic and produces a valid date struct
-        assert!(d_neg_deep.year < 1970);
+        // Deeper negative samples cross-checked against the `time` crate.
+        let samples = [-10_000_i64, -3_653, -366, -365, -30, -7];
+        for days in samples {
+            let got = Date::from_days_since_unix_epoch(days).unwrap();
+            let std_dt = StdOffsetDateTime::from_unix_timestamp(days * 86_400).unwrap();
+            assert_eq!(got.year, std_dt.year(), "Year mismatch at day {}", days);
+            assert_eq!(got.month, u8::from(std_dt.month()), "Month mismatch at day {}", days);
+            assert_eq!(got.day, std_dt.day(), "Day mismatch at day {}", days);
+        }
     }
 
     #[test]
@@ -386,5 +416,20 @@ mod tests {
     // Helper needed for the test logic (copy of internal helper)
     fn is_leap_year(year: i32) -> bool {
         (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+    }
+
+    fn reference_days_in_month(year: i32, month: u8) -> u8 {
+        match month {
+            1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+            4 | 6 | 9 | 11 => 30,
+            2 => {
+                if is_leap_year(year) {
+                    29
+                } else {
+                    28
+                }
+            }
+            _ => panic!("invalid month in test helper: {}", month),
+        }
     }
 }
