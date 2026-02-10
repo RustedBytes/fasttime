@@ -75,6 +75,7 @@ pub struct Date {
 
 impl Date {
     /// Construct a date, validating year/month/day.
+    #[inline]
     pub fn from_ymd(year: i32, month: u8, day: u8) -> Result<Self, DateError> {
         if !(1..=12).contains(&month) {
             return Err(DateError::InvalidDate);
@@ -102,6 +103,7 @@ impl Date {
     ///
     /// - 1970-01-01 => 0
     /// - 1969-12-31 => -1
+    #[inline]
     pub fn from_days_since_unix_epoch(days: i64) -> Result<Self, DateError> {
         // Constants from the article (x64 version).
         const ERAS: i64 = 4_726_498_270;
@@ -276,6 +278,7 @@ pub struct Time {
 }
 
 impl Time {
+    #[inline]
     pub fn from_hms_nano(
         hour: u8,
         minute: u8,
@@ -306,6 +309,7 @@ impl Time {
     }
 
     /// Build from seconds and nanoseconds since midnight.
+    #[inline]
     pub fn from_seconds_nanos(secs: u32, nanos: u32) -> Result<Self, TimeError> {
         if secs >= 86_400 || nanos >= 1_000_000_000 {
             return Err(TimeError::InvalidTime);
@@ -414,6 +418,7 @@ pub struct Duration {
 impl Duration {
     pub const ZERO: Duration = Duration { nanos: 0 };
 
+    #[inline(always)]
     pub fn seconds(secs: i64) -> Duration {
         Duration {
             nanos: (secs as i128) * 1_000_000_000,
@@ -440,6 +445,7 @@ impl Duration {
         self.nanos as f64 / 1_000_000_000.0
     }
 
+    #[inline(always)]
     pub fn total_nanos(self) -> i128 {
         self.nanos
     }
@@ -490,12 +496,14 @@ pub struct DateTime {
 }
 
 impl DateTime {
+    #[inline(always)]
     pub fn new(date: Date, time: Time) -> DateTime {
         DateTime { date, time }
     }
 
     /// Build from Unix timestamp (seconds since 1970-01-01T00:00:00Z)
     /// plus an additional nanoseconds offset (can be negative or >1e9).
+    #[inline]
     pub fn from_unix_timestamp(secs: i64, nanos: i32) -> Result<DateTime, DateError> {
         // Normalize (secs, nanos) pair.
         let mut s = secs as i128;
@@ -535,6 +543,7 @@ impl DateTime {
     }
 
     /// Difference between two instants (self - other).
+    #[inline(always)]
     pub fn difference(self, other: DateTime) -> Duration {
         Duration::nanoseconds(self.unix_timestamp_nanos() - other.unix_timestamp_nanos())
     }
@@ -634,10 +643,12 @@ impl UtcOffset {
         Self::from_seconds(total)
     }
 
+    #[inline(always)]
     pub fn as_seconds(self) -> i32 {
         self.seconds
     }
 
+    #[inline(always)]
     pub fn is_utc(self) -> bool {
         self.seconds == 0
     }
@@ -697,11 +708,13 @@ impl OffsetDateTime {
     }
 
     /// Seconds since Unix epoch (1970-01-01T00:00:00Z).
+    #[inline(always)]
     pub fn unix_timestamp(&self) -> i64 {
         self.utc.unix_timestamp()
     }
 
     /// Nanoseconds since Unix epoch.
+    #[inline(always)]
     pub fn unix_timestamp_nanos(&self) -> i128 {
         self.utc.unix_timestamp_nanos()
     }
@@ -716,6 +729,7 @@ impl OffsetDateTime {
     }
 
     /// Difference between two instants (self - other).
+    #[inline(always)]
     pub fn difference(&self, other: OffsetDateTime) -> Duration {
         self.utc.difference(other.utc)
     }

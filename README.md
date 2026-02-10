@@ -93,30 +93,30 @@ The benchmark covers three operations:
 
 ```
 from_unix_timestamp/fasttime::default-n=1024
-                        time:   [6.3503 µs 6.3531 µs 6.3642 µs]
-                        change: [−0.1416% +0.3450% +0.8352%] (p = 0.56 > 0.05)
+                        time:   [6.3651 µs 6.3674 µs 6.3765 µs]
+                        change: [+0.0149% +0.2131% +0.4118%] (p = 0.14 > 0.05)
                         No change in performance detected.
 from_unix_timestamp/time::default-n=1024
-                        time:   [8.4149 µs 8.4183 µs 8.4318 µs]
-                        change: [−1.5616% −1.4042% −1.2466%] (p = 0.06 > 0.05)
+                        time:   [8.6900 µs 8.6924 µs 8.7022 µs]
+                        change: [+3.0617% +3.2376% +3.4139%] (p = 0.10 > 0.05)
                         No change in performance detected.
 
 to_unix_timestamp/fasttime::default-n=1024
-                        time:   [1.6900 µs 1.6926 µs 1.7030 µs]
-                        change: [−0.7572% −0.3115% +0.1347%] (p = 0.70 > 0.05)
+                        time:   [1.6843 µs 1.6853 µs 1.6894 µs]
+                        change: [−1.1021% −0.5719% −0.0376%] (p = 0.10 > 0.05)
                         No change in performance detected.
 to_unix_timestamp/time::default-n=1024
-                        time:   [1.8548 µs 1.8553 µs 1.8573 µs]
-                        change: [+0.1762% +0.3302% +0.4845%] (p = 0.10 > 0.05)
+                        time:   [1.8566 µs 1.8589 µs 1.8682 µs]
+                        change: [−0.0414% +0.3413% +0.7245%] (p = 0.33 > 0.05)
                         No change in performance detected.
 
 to_unix_timestamp_nanos/fasttime::default-n=1024
-                        time:   [1.9964 µs 1.9976 µs 2.0025 µs]
-                        change: [−0.4830% −0.2388% +0.0059%] (p = 0.20 > 0.05)
+                        time:   [2.0008 µs 2.0063 µs 2.0077 µs]
+                        change: [−0.0852% +0.2399% +0.5661%] (p = 0.33 > 0.05)
                         No change in performance detected.
 to_unix_timestamp_nanos/time::default-n=1024
-                        time:   [2.0733 µs 2.0767 µs 2.0775 µs]
-                        change: [−0.0164% +0.1895% +0.3958%] (p = 0.24 > 0.05)
+                        time:   [2.0863 µs 2.0880 µs 2.0946 µs]
+                        change: [+0.4222% +0.7240% +1.0265%] (p = 0.08 > 0.05)
                         No change in performance detected.
 ```
 
