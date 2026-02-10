@@ -120,6 +120,14 @@ to_unix_timestamp_nanos/time::default-n=1024
                         No change in performance detected.
 ```
 
+### Conclusion
+
+In this sample run, `fasttime` is consistently faster than `time` for all three
+timestamp operations (about 27% faster for `from_unix_timestamp`, about 9%
+faster for `to_unix_timestamp`, and about 4% faster for
+`to_unix_timestamp_nanos`), while all comparisons report no statistically
+significant regression versus baseline.
+
 ## Development
 
 - Format and lint the crate with your preferred Rust tooling (`cargo fmt`,
