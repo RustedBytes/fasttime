@@ -28,7 +28,7 @@ only depends on `core` by default and enables a handful of conveniences (such as
 
 ```toml
 [dependencies]
-fasttime = "0.1"
+fasttime = "0.2"
 ```
 
 ### Python
