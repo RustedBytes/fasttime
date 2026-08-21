@@ -18,7 +18,7 @@
 //!
 //! ## Python Bindings
 //!
-//! When built with the `python` feature, this crate provides Python bindings via PyO3.
+//! When built with the `python` feature, this crate provides Python bindings via `PyO3`.
 //! See the `python/` directory for examples and documentation.
 
 use core::cmp::Ordering;
@@ -41,6 +41,7 @@ pub enum Weekday {
 }
 
 impl Weekday {
+    #[must_use]
     pub fn number_from_monday(self) -> u8 {
         match self {
             Weekday::Monday => 1,
@@ -75,6 +76,11 @@ pub struct Date {
 
 impl Date {
     /// Construct a date, validating year/month/day.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::InvalidDate`] if the components do not form a valid
+    /// Gregorian date.
     #[inline]
     pub fn from_ymd(year: i32, month: u8, day: u8) -> Result<Self, DateError> {
         if !(1..=12).contains(&month) {
@@ -90,6 +96,7 @@ impl Date {
     /// Construct a date with minimal checking; debug-only asserts.
     ///
     /// Panics in debug builds if the date is invalid.
+    #[must_use]
     pub const fn from_ymd_unchecked(year: i32, month: u8, day: u8) -> Self {
         // These are simple invariants, checked in debug builds only.
         debug_assert!(month >= 1 && month <= 12);
@@ -103,6 +110,12 @@ impl Date {
     ///
     /// - 1970-01-01 => 0
     /// - 1969-12-31 => -1
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::OutOfRange`] if `days` cannot be represented by a
+    /// [`Date`], or [`DateError::InvalidDate`] if conversion produces invalid
+    /// date components.
     #[inline]
     pub fn from_days_since_unix_epoch(days: i64) -> Result<Self, DateError> {
         // Constants from the article (x64 version).
@@ -113,34 +126,42 @@ impl Date {
         const C2: u64 = 50_504_432_782_230_121;
         const C3: u64 = 8_619_973_866_219_416;
 
-        let rev: i64 = D_SHIFT - days;
+        let rev = D_SHIFT.checked_sub(days).ok_or(DateError::OutOfRange)?;
+        let rev = u64::try_from(rev).map_err(|_| DateError::OutOfRange)?;
 
-        // 64x64 → high 64 bit multiplies via u128 with explicit u64 casts.
-        let cen: i64 = (((rev as u64 as u128) * (C1 as u128)) >> 64) as i64;
-        let jul: i64 = rev + cen - cen / 4;
+        // 64x64 → high 64 bit multiplies via u128.
+        let cen = i64::try_from((u128::from(rev) * u128::from(C1)) >> 64)
+            .map_err(|_| DateError::OutOfRange)?;
+        let rev = i64::try_from(rev).map_err(|_| DateError::OutOfRange)?;
+        let jul = rev + cen - cen / 4;
 
-        let num: u128 = (jul as u64 as u128) * (C2 as u128);
-        let yrs: i64 = Y_SHIFT - ((num >> 64) as i64);
-        let low: u64 = num as u64;
-        let ypt: i64 = ((782_432u128 * low as u128) >> 64) as i64;
+        let jul = u64::try_from(jul).map_err(|_| DateError::OutOfRange)?;
+        let num = u128::from(jul) * u128::from(C2);
+        let high = i64::try_from(num >> 64).map_err(|_| DateError::OutOfRange)?;
+        let yrs = Y_SHIFT - high;
+        let low = u64::try_from(num & u128::from(u64::MAX)).map_err(|_| DateError::OutOfRange)?;
+        let ypt = i64::try_from((782_432u128 * u128::from(low)) >> 64)
+            .map_err(|_| DateError::OutOfRange)?;
 
         let bump = ypt < 126_464;
         let shift: i64 = if bump { 191_360 } else { 977_792 };
 
         let n: i64 = (yrs.rem_euclid(4)) * 512 + shift - ypt;
 
-        let d: i64 = (((((n as u64) & 0xFFFF) as u128) * (C3 as u128)) >> 64) as i64;
+        let n_low = u64::try_from(n).map_err(|_| DateError::OutOfRange)? & 0xFFFF;
+        let d = i64::try_from((u128::from(n_low) * u128::from(C3)) >> 64)
+            .map_err(|_| DateError::OutOfRange)?;
 
         let day_i: i64 = d + 1;
         let month_i: i64 = n / 65_536;
-        let year_i: i64 = yrs + if bump { 1 } else { 0 };
+        let year_i = yrs + i64::from(bump);
 
-        if !(i32::MIN as i64..=i32::MAX as i64).contains(&year_i) {
+        if !(i64::from(i32::MIN)..=i64::from(i32::MAX)).contains(&year_i) {
             return Err(DateError::OutOfRange);
         }
-        let year = year_i as i32;
-        let month = month_i as u8;
-        let day = day_i as u8;
+        let year = i32::try_from(year_i).map_err(|_| DateError::OutOfRange)?;
+        let month = u8::try_from(month_i).map_err(|_| DateError::InvalidDate)?;
+        let day = u8::try_from(day_i).map_err(|_| DateError::InvalidDate)?;
 
         // Extra safety: validate
         if Date::from_ymd(year, month, day).is_err() {
@@ -155,6 +176,7 @@ impl Date {
     /// This uses a modified Neri-Schneider inverse civil→days formula
     /// (as described by Ben Joffe), exact for the proleptic Gregorian calendar.
     #[inline]
+    #[must_use]
     pub fn days_since_unix_epoch(self) -> i64 {
         days_from_civil(self.year, self.month, self.day)
     }
@@ -162,6 +184,7 @@ impl Date {
     /// Day of week (Monday = 1).
     ///
     /// Unix epoch 1970-01-01 was a Thursday, so we just offset.
+    #[must_use]
     pub fn weekday(self) -> Weekday {
         // 1970-01-01 was Thursday (4).
         let days = self.days_since_unix_epoch();
@@ -179,11 +202,13 @@ impl Date {
     }
 
     /// Day of year, 1..=365 (or 366 for leap years).
+    #[must_use]
     pub fn ordinal(self) -> u16 {
-        let month = self.month;
-        let day = self.day as u16;
         const CUM_DAYS: [u16; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-        let mut ord = CUM_DAYS[(month - 1) as usize] + day;
+
+        let month = self.month;
+        let day = u16::from(self.day);
+        let mut ord = CUM_DAYS[usize::from(month - 1)] + day;
         if month > 2 && is_leap_year(self.year) {
             ord += 1;
         }
@@ -191,9 +216,15 @@ impl Date {
     }
 
     /// Add a number of days, returning a new `Date` or `OutOfRange`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::OutOfRange`] if the resulting date cannot be
+    /// represented.
     pub fn add_days(self, days: i64) -> Result<Date, DateError> {
         let base = self.days_since_unix_epoch();
-        Date::from_days_since_unix_epoch(base + days)
+        let result = base.checked_add(days).ok_or(DateError::OutOfRange)?;
+        Date::from_days_since_unix_epoch(result)
     }
 }
 
@@ -250,14 +281,17 @@ impl FromStr for Date {
             }
         }
 
-        let (first, second) = match (first, second) {
-            (Some(first), Some(second)) => (first, second),
-            _ => return Err(DateError::InvalidDate),
+        let (Some(first), Some(second)) = (first, second) else {
+            return Err(DateError::InvalidDate);
         };
 
         let y = parse_i32_bytes(&bytes[..first]).ok_or(DateError::InvalidDate)?;
-        let m = parse_u32_bytes(&bytes[first + 1..second], 12).ok_or(DateError::InvalidDate)? as u8;
-        let d = parse_u32_bytes(&bytes[second + 1..], 31).ok_or(DateError::InvalidDate)? as u8;
+        let m = parse_u32_bytes(&bytes[first + 1..second], 12)
+            .and_then(|value| u8::try_from(value).ok())
+            .ok_or(DateError::InvalidDate)?;
+        let d = parse_u32_bytes(&bytes[second + 1..], 31)
+            .and_then(|value| u8::try_from(value).ok())
+            .ok_or(DateError::InvalidDate)?;
         Date::from_ymd(y, m, d)
     }
 }
@@ -278,6 +312,12 @@ pub struct Time {
 }
 
 impl Time {
+    /// Construct a time, validating each component.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TimeError::InvalidTime`] if a component is outside its valid
+    /// range.
     #[inline]
     pub fn from_hms_nano(
         hour: u8,
@@ -298,26 +338,33 @@ impl Time {
 
     /// Total seconds since midnight (ignores nanoseconds).
     #[inline]
+    #[must_use]
     pub fn seconds_since_midnight(self) -> u32 {
-        (self.hour as u32) * 3600 + (self.minute as u32) * 60 + (self.second as u32)
+        u32::from(self.hour) * 3600 + u32::from(self.minute) * 60 + u32::from(self.second)
     }
 
     /// Total nanoseconds since midnight.
     #[inline]
+    #[must_use]
     pub fn nanos_since_midnight(self) -> u64 {
-        self.seconds_since_midnight() as u64 * 1_000_000_000 + self.nanosecond as u64
+        u64::from(self.seconds_since_midnight()) * 1_000_000_000 + u64::from(self.nanosecond)
     }
 
     /// Build from seconds and nanoseconds since midnight.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TimeError::InvalidTime`] if `secs` is not within one day or
+    /// `nanos` is not within one second.
     #[inline]
     pub fn from_seconds_nanos(secs: u32, nanos: u32) -> Result<Self, TimeError> {
         if secs >= 86_400 || nanos >= 1_000_000_000 {
             return Err(TimeError::InvalidTime);
         }
-        let hour = (secs / 3600) as u8;
+        let hour = u8::try_from(secs / 3600).map_err(|_| TimeError::InvalidTime)?;
         let rem = secs % 3600;
-        let minute = (rem / 60) as u8;
-        let second = (rem % 60) as u8;
+        let minute = u8::try_from(rem / 60).map_err(|_| TimeError::InvalidTime)?;
+        let second = u8::try_from(rem % 60).map_err(|_| TimeError::InvalidTime)?;
         Time::from_hms_nano(hour, minute, second, nanos)
     }
 }
@@ -345,7 +392,8 @@ impl fmt::Display for Time {
             let mut frac = [b'0'; 9];
             let mut ns = self.nanosecond;
             for i in (0..9).rev() {
-                frac[i] = b'0' + (ns % 10) as u8;
+                let digit = u8::try_from(ns % 10).expect("a decimal digit fits in u8");
+                frac[i] = b'0' + digit;
                 ns /= 10;
             }
             // find last non-zero
@@ -388,16 +436,19 @@ impl FromStr for Time {
             }
         }
 
-        let (first, second) = match (first, second) {
-            (Some(first), Some(second)) => (first, second),
-            _ => return Err(TimeError::InvalidTime),
+        let (Some(first), Some(second)) = (first, second) else {
+            return Err(TimeError::InvalidTime);
         };
 
-        let h = parse_u32_bytes(&hms_bytes[..first], 23).ok_or(TimeError::InvalidTime)? as u8;
-        let m =
-            parse_u32_bytes(&hms_bytes[first + 1..second], 59).ok_or(TimeError::InvalidTime)? as u8;
-        let sec =
-            parse_u32_bytes(&hms_bytes[second + 1..], 59).ok_or(TimeError::InvalidTime)? as u8;
+        let h = parse_u32_bytes(&hms_bytes[..first], 23)
+            .and_then(|value| u8::try_from(value).ok())
+            .ok_or(TimeError::InvalidTime)?;
+        let m = parse_u32_bytes(&hms_bytes[first + 1..second], 59)
+            .and_then(|value| u8::try_from(value).ok())
+            .ok_or(TimeError::InvalidTime)?;
+        let sec = parse_u32_bytes(&hms_bytes[second + 1..], 59)
+            .and_then(|value| u8::try_from(value).ok())
+            .ok_or(TimeError::InvalidTime)?;
 
         let nanos = if let Some(fr) = frac_bytes {
             parse_fraction_nanos(fr).ok_or(TimeError::InvalidTime)?
@@ -418,34 +469,41 @@ pub struct Duration {
 impl Duration {
     pub const ZERO: Duration = Duration { nanos: 0 };
 
-    #[inline(always)]
+    #[inline]
+    #[must_use]
     pub fn seconds(secs: i64) -> Duration {
         Duration {
-            nanos: (secs as i128) * 1_000_000_000,
+            nanos: i128::from(secs) * 1_000_000_000,
         }
     }
 
+    #[must_use]
     pub fn milliseconds(ms: i64) -> Duration {
         Duration {
-            nanos: (ms as i128) * 1_000_000,
+            nanos: i128::from(ms) * 1_000_000,
         }
     }
 
+    #[must_use]
     pub fn microseconds(us: i64) -> Duration {
         Duration {
-            nanos: (us as i128) * 1_000,
+            nanos: i128::from(us) * 1_000,
         }
     }
 
+    #[must_use]
     pub fn nanoseconds(ns: i128) -> Duration {
         Duration { nanos: ns }
     }
 
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn total_seconds(self) -> f64 {
         self.nanos as f64 / 1_000_000_000.0
     }
 
-    #[inline(always)]
+    #[inline]
+    #[must_use]
     pub fn total_nanos(self) -> i128 {
         self.nanos
     }
@@ -496,71 +554,102 @@ pub struct DateTime {
 }
 
 impl DateTime {
-    #[inline(always)]
+    #[inline]
+    #[must_use]
     pub fn new(date: Date, time: Time) -> DateTime {
         DateTime { date, time }
     }
 
     /// Build from Unix timestamp (seconds since 1970-01-01T00:00:00Z)
     /// plus an additional nanoseconds offset (can be negative or >1e9).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::OutOfRange`] if the normalized timestamp cannot be
+    /// represented, or [`DateError::InvalidDate`] if its time components are
+    /// invalid.
     #[inline]
     pub fn from_unix_timestamp(secs: i64, nanos: i32) -> Result<DateTime, DateError> {
         // Normalize (secs, nanos) pair.
-        let mut s = secs as i128;
-        let mut n = nanos as i128;
+        let mut s = i128::from(secs);
+        let mut n = i128::from(nanos);
         s += n.div_euclid(1_000_000_000);
         n = n.rem_euclid(1_000_000_000);
-        let s_i64 = s as i64;
+        let s_i64 = i64::try_from(s).map_err(|_| DateError::OutOfRange)?;
 
         let days = s_i64.div_euclid(86_400);
         let secs_of_day = s_i64.rem_euclid(86_400);
         let date = Date::from_days_since_unix_epoch(days)?;
-        let time = Time::from_seconds_nanos(secs_of_day as u32, n as u32)
-            .map_err(|_| DateError::InvalidDate)?;
+        let secs_of_day = u32::try_from(secs_of_day).map_err(|_| DateError::InvalidDate)?;
+        let nanos = u32::try_from(n).map_err(|_| DateError::InvalidDate)?;
+        let time =
+            Time::from_seconds_nanos(secs_of_day, nanos).map_err(|_| DateError::InvalidDate)?;
         Ok(DateTime { date, time })
     }
 
     /// Seconds since Unix epoch (1970-01-01T00:00:00Z).
     #[inline]
+    #[must_use]
     pub fn unix_timestamp(self) -> i64 {
         let days = self.date.days_since_unix_epoch();
-        let day_secs = self.time.seconds_since_midnight() as i64;
+        let day_secs = i64::from(self.time.seconds_since_midnight());
         days * 86_400 + day_secs
     }
 
     /// Nanoseconds since Unix epoch, as i128.
     #[inline]
+    #[must_use]
     pub fn unix_timestamp_nanos(self) -> i128 {
-        self.unix_timestamp() as i128 * 1_000_000_000 + self.time.nanosecond as i128
+        i128::from(self.unix_timestamp()) * 1_000_000_000 + i128::from(self.time.nanosecond)
     }
 
     /// Add a duration, returning a new `DateTime` (or `OutOfRange` on overflow).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::OutOfRange`] if the resulting timestamp cannot be
+    /// represented.
     pub fn add_duration(self, dur: Duration) -> Result<DateTime, DateError> {
-        let t = self.unix_timestamp_nanos() + dur.total_nanos();
+        let t = self
+            .unix_timestamp_nanos()
+            .checked_add(dur.total_nanos())
+            .ok_or(DateError::OutOfRange)?;
         let secs = t.div_euclid(1_000_000_000);
         let nanos = t.rem_euclid(1_000_000_000);
-        DateTime::from_unix_timestamp(secs as i64, nanos as i32)
+        let secs = i64::try_from(secs).map_err(|_| DateError::OutOfRange)?;
+        let nanos = i32::try_from(nanos).map_err(|_| DateError::InvalidDate)?;
+        DateTime::from_unix_timestamp(secs, nanos)
     }
 
     /// Difference between two instants (self - other).
-    #[inline(always)]
+    #[inline]
+    #[must_use]
     pub fn difference(self, other: DateTime) -> Duration {
         Duration::nanoseconds(self.unix_timestamp_nanos() - other.unix_timestamp_nanos())
     }
 
     /// Get the current UTC `DateTime` (requires `std` feature).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::OutOfRange`] if the system clock is outside the
+    /// range supported by [`DateTime`].
     #[cfg(feature = "std")]
     pub fn now_utc() -> Result<Self, DateError> {
         use std::time::{SystemTime, UNIX_EPOCH};
         let now = SystemTime::now();
         match now.duration_since(UNIX_EPOCH) {
             Ok(dur) => {
-                DateTime::from_unix_timestamp(dur.as_secs() as i64, dur.subsec_nanos() as i32)
+                let secs = i64::try_from(dur.as_secs()).map_err(|_| DateError::OutOfRange)?;
+                let nanos =
+                    i32::try_from(dur.subsec_nanos()).map_err(|_| DateError::InvalidDate)?;
+                DateTime::from_unix_timestamp(secs, nanos)
             }
             Err(e) => {
                 let dur = e.duration();
-                let secs = dur.as_secs() as i64;
-                let nanos = dur.subsec_nanos() as i32;
+                let secs = i64::try_from(dur.as_secs()).map_err(|_| DateError::OutOfRange)?;
+                let nanos =
+                    i32::try_from(dur.subsec_nanos()).map_err(|_| DateError::InvalidDate)?;
                 DateTime::from_unix_timestamp(-secs, -nanos)
             }
         }
@@ -617,6 +706,11 @@ pub struct UtcOffset {
 
 impl UtcOffset {
     /// Construct from a total number of seconds, roughly in [-24h, +24h].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`UtcOffsetError::OutOfRange`] if `seconds` is outside the
+    /// inclusive range `-86_400..=86_400`.
     pub fn from_seconds(seconds: i32) -> Result<Self, UtcOffsetError> {
         // Rough sanity bounds: [-24h, +24h].
         if !(-86_400..=86_400).contains(&seconds) {
@@ -630,6 +724,11 @@ impl UtcOffset {
     /// For example:
     /// - `from_hours_minutes(true, 2, 0)` => +02:00
     /// - `from_hours_minutes(false, 5, 30)` => -05:30
+    ///
+    /// # Errors
+    ///
+    /// Returns [`UtcOffsetError::OutOfRange`] if `hours` exceeds 23 or
+    /// `minutes` exceeds 59.
     pub fn from_hours_minutes(
         sign_positive: bool,
         hours: u8,
@@ -638,17 +737,19 @@ impl UtcOffset {
         if hours > 23 || minutes > 59 {
             return Err(UtcOffsetError::OutOfRange);
         }
-        let total = (hours as i32) * 3600 + (minutes as i32) * 60;
+        let total = i32::from(hours) * 3600 + i32::from(minutes) * 60;
         let total = if sign_positive { total } else { -total };
         Self::from_seconds(total)
     }
 
-    #[inline(always)]
+    #[inline]
+    #[must_use]
     pub fn as_seconds(self) -> i32 {
         self.seconds
     }
 
-    #[inline(always)]
+    #[inline]
+    #[must_use]
     pub fn is_utc(self) -> bool {
         self.seconds == 0
     }
@@ -675,7 +776,7 @@ impl fmt::Display for UtcOffset {
         }
         let hours = secs / 3600;
         let minutes = (secs % 3600) / 60;
-        write!(f, "{}{:02}:{:02}", sign, hours, minutes)
+        write!(f, "{sign}{hours:02}:{minutes:02}")
     }
 }
 
@@ -690,36 +791,54 @@ pub struct OffsetDateTime {
 
 impl OffsetDateTime {
     /// Construct from a UTC instant and an offset.
+    #[must_use]
     pub fn from_utc(utc: DateTime, offset: UtcOffset) -> Self {
         OffsetDateTime { utc, offset }
     }
 
     /// Construct from a local date+time with offset, converting to UTC.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::OutOfRange`] if conversion to UTC exceeds the
+    /// supported date range.
     pub fn from_local(date: Date, time: Time, offset: UtcOffset) -> Result<Self, DateError> {
         let local = DateTime::new(date, time);
-        let utc = local.add_duration(Duration::seconds(-(offset.as_seconds() as i64)))?;
+        let utc = local.add_duration(Duration::seconds(-i64::from(offset.as_seconds())))?;
         Ok(OffsetDateTime { utc, offset })
     }
 
     /// Local date/time as seen in this offset.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::OutOfRange`] if applying the offset exceeds the
+    /// supported date range.
     pub fn to_local(&self) -> Result<DateTime, DateError> {
         self.utc
-            .add_duration(Duration::seconds(self.offset.as_seconds() as i64))
+            .add_duration(Duration::seconds(i64::from(self.offset.as_seconds())))
     }
 
     /// Seconds since Unix epoch (1970-01-01T00:00:00Z).
-    #[inline(always)]
+    #[inline]
+    #[must_use]
     pub fn unix_timestamp(&self) -> i64 {
         self.utc.unix_timestamp()
     }
 
     /// Nanoseconds since Unix epoch.
-    #[inline(always)]
+    #[inline]
+    #[must_use]
     pub fn unix_timestamp_nanos(&self) -> i128 {
         self.utc.unix_timestamp_nanos()
     }
 
     /// Add a duration, keeping the same offset.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::OutOfRange`] if the resulting instant exceeds the
+    /// supported date range.
     pub fn add_duration(&self, dur: Duration) -> Result<Self, DateError> {
         let utc = self.utc.add_duration(dur)?;
         Ok(OffsetDateTime {
@@ -729,7 +848,8 @@ impl OffsetDateTime {
     }
 
     /// Difference between two instants (self - other).
-    #[inline(always)]
+    #[inline]
+    #[must_use]
     pub fn difference(&self, other: OffsetDateTime) -> Duration {
         self.utc.difference(other.utc)
     }
@@ -820,16 +940,16 @@ fn parse_i32_bytes(bytes: &[u8]) -> Option<i32> {
     }
 
     let limit: i64 = if neg {
-        i32::MAX as i64 + 1
+        i64::from(i32::MAX) + 1
     } else {
-        i32::MAX as i64
+        i64::from(i32::MAX)
     };
     let mut val: i64 = 0;
     for &b in &bytes[idx..] {
         if !b.is_ascii_digit() {
             return None;
         }
-        let digit = (b - b'0') as i64;
+        let digit = i64::from(b - b'0');
         if val > limit / 10 || (val == limit / 10 && digit > limit % 10) {
             return None;
         }
@@ -839,7 +959,7 @@ fn parse_i32_bytes(bytes: &[u8]) -> Option<i32> {
     if neg {
         val = -val;
     }
-    Some(val as i32)
+    i32::try_from(val).ok()
 }
 
 fn parse_u32_bytes(bytes: &[u8], max: u32) -> Option<u32> {
@@ -851,7 +971,7 @@ fn parse_u32_bytes(bytes: &[u8], max: u32) -> Option<u32> {
         if !b.is_ascii_digit() {
             return None;
         }
-        let digit = (b - b'0') as u32;
+        let digit = u32::from(b - b'0');
         if val > max / 10 || (val == max / 10 && digit > max % 10) {
             return None;
         }
@@ -870,7 +990,7 @@ fn parse_fraction_nanos(bytes: &[u8]) -> Option<u32> {
         if !b.is_ascii_digit() {
             return None;
         }
-        val = val * 10 + (b - b'0') as u32;
+        val = val * 10 + u32::from(b - b'0');
     }
     let scale = 9 - len;
     Some(val * POW10_U32[scale])
@@ -883,6 +1003,13 @@ pub enum Rfc3339OffsetError {
     OutOfRange,
 }
 
+/// Parse an RFC 3339 UTC offset such as `Z`, `+02:30`, or `-0700`.
+///
+/// # Errors
+///
+/// Returns [`Rfc3339OffsetError::InvalidFormat`] if the string is malformed,
+/// or [`Rfc3339OffsetError::OutOfRange`] if the parsed offset exceeds the
+/// supported range.
 pub fn parse_rfc3339_offset(s: &str) -> Result<UtcOffset, Rfc3339OffsetError> {
     if s == "Z" || s == "z" {
         return UtcOffset::from_seconds(0).map_err(|_| Rfc3339OffsetError::OutOfRange);
@@ -925,11 +1052,15 @@ pub fn parse_rfc3339_offset(s: &str) -> Result<UtcOffset, Rfc3339OffsetError> {
         return Err(Rfc3339OffsetError::InvalidFormat);
     }
 
-    let hours = parse_u32_bytes(h_bytes, 99).ok_or(Rfc3339OffsetError::InvalidFormat)? as u8;
+    let hours = parse_u32_bytes(h_bytes, 99)
+        .and_then(|value| u8::try_from(value).ok())
+        .ok_or(Rfc3339OffsetError::InvalidFormat)?;
     let minutes = if m_bytes.is_empty() {
         0
     } else {
-        parse_u32_bytes(m_bytes, 99).ok_or(Rfc3339OffsetError::InvalidFormat)? as u8
+        parse_u32_bytes(m_bytes, 99)
+            .and_then(|value| u8::try_from(value).ok())
+            .ok_or(Rfc3339OffsetError::InvalidFormat)?
     };
     UtcOffset::from_hours_minutes(sign_positive, hours, minutes)
         .map_err(|_| Rfc3339OffsetError::OutOfRange)
@@ -948,7 +1079,7 @@ fn days_in_month(year: i32, month: u8) -> u8 {
         return 0;
     }
     // Branch-free month length for all non-February months.
-    (month ^ (month >> 3)) | 30
+    (month ^ (month >> 3)) | 0b1_1110
 }
 
 // Modified Neri-Schneider inverse (civil → days), as documented by Ben Joffe.
@@ -961,11 +1092,11 @@ fn days_from_civil(y: i32, m: u8, d: u8) -> i64 {
     const RATA_SHIFT: i64 = 719_468 + 146_097 * S + 1;
 
     let bump = m <= 2;
-    let year = y as i64 + YEAR_SHIFT - if bump { 1 } else { 0 };
+    let year = i64::from(y) + YEAR_SHIFT - i64::from(bump);
     let cent = year / 100;
     let phase = if bump { 8_829 } else { -2_919 };
 
     let y_days = year * 365 + year / 4 - cent + cent / 4;
-    let m_days = (979 * (m as i64) + phase) / 32;
-    y_days + m_days + d as i64 - RATA_SHIFT
+    let m_days = (979 * i64::from(m) + phase) / 32;
+    y_days + m_days + i64::from(d) - RATA_SHIFT
 }

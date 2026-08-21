@@ -9,8 +9,11 @@ const SAMPLE_SIZES: &[(usize, &str)] = &[(1024, "default")];
 fn unix_samples(len: usize) -> Vec<(i64, i32)> {
     (0..len)
         .map(|i| {
-            let secs = (i as i64 * 250_000) - 125_000_000;
-            let nanos = ((i as i64 * 97_921) % 2_000_000_000) as i32 - 1_000_000_000;
+            let i = i64::try_from(i).expect("sample index fits in i64");
+            let secs = (i * 250_000) - 125_000_000;
+            let nanos = i32::try_from((i * 97_921) % 2_000_000_000)
+                .expect("sample nanoseconds fit in i32")
+                - 1_000_000_000;
             (secs, nanos)
         })
         .collect()
@@ -22,7 +25,7 @@ fn datetime_samples(len: usize) -> (Vec<DateTime>, Vec<OffsetDateTime>) {
     let mut time = Vec::with_capacity(raw.len());
     for (secs, nanos) in raw {
         fast.push(DateTime::from_unix_timestamp(secs, nanos).unwrap());
-        let total_nanos = secs as i128 * 1_000_000_000 + nanos as i128;
+        let total_nanos = i128::from(secs) * 1_000_000_000 + i128::from(nanos);
         time.push(OffsetDateTime::from_unix_timestamp_nanos(total_nanos).unwrap());
     }
     (fast, time)
@@ -48,7 +51,7 @@ fn bench_from_unix_timestamp(c: &mut Criterion) {
         group.bench_function(time_name, move |b| {
             b.iter(|| {
                 for &(secs, nanos) in &time_samples {
-                    let total_nanos = secs as i128 * 1_000_000_000 + nanos as i128;
+                    let total_nanos = i128::from(secs) * 1_000_000_000 + i128::from(nanos);
                     black_box(OffsetDateTime::from_unix_timestamp_nanos(total_nanos).unwrap());
                 }
             });

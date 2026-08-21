@@ -1,6 +1,9 @@
-//! Python bindings for fasttime using PyO3.
+//! Python bindings for fasttime using `PyO3`.
 
 #![cfg(feature = "python")]
+// These comments become Google-style Python docstrings. Rust Markdown
+// backticks around Python type names would leak into `help()` output.
+#![allow(clippy::doc_markdown)]
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -10,8 +13,8 @@ use crate::{Date, DateTime, Duration, OffsetDateTime, Time, UtcOffset, Weekday a
 
 // ===== Weekday =====
 
-#[pyclass(name = "Weekday", module = "fasttime")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[pyclass(name = "Weekday", module = "fasttime", from_py_object)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyWeekday(RustWeekday);
 
 #[pymethods]
@@ -48,8 +51,8 @@ impl PyWeekday {
 
 // ===== PyDate =====
 
-#[pyclass(name = "Date", module = "fasttime")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[pyclass(name = "Date", module = "fasttime", from_py_object)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyDate(Date);
 
 #[pymethods]
@@ -70,7 +73,7 @@ impl PyDate {
     fn new(year: i32, month: u8, day: u8) -> PyResult<Self> {
         Date::from_ymd(year, month, day)
             .map(PyDate)
-            .map_err(|e| PyValueError::new_err(format!("Invalid date: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Invalid date: {e:?}")))
     }
 
     #[getter]
@@ -103,7 +106,7 @@ impl PyDate {
     fn from_days_since_unix_epoch(_cls: &Bound<'_, PyType>, days: i64) -> PyResult<Self> {
         Date::from_days_since_unix_epoch(days)
             .map(PyDate)
-            .map_err(|e| PyValueError::new_err(format!("Invalid date: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Invalid date: {e:?}")))
     }
 
     /// Convert to days since Unix epoch (1970-01-01).
@@ -139,7 +142,7 @@ impl PyDate {
         self.0
             .add_days(days)
             .map(PyDate)
-            .map_err(|e| PyValueError::new_err(format!("Date out of range: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Date out of range: {e:?}")))
     }
 
     /// Parse a date from ISO format (YYYY-MM-DD).
@@ -157,7 +160,7 @@ impl PyDate {
     fn parse(_cls: &Bound<'_, PyType>, s: &str) -> PyResult<Self> {
         s.parse::<Date>()
             .map(PyDate)
-            .map_err(|e| PyValueError::new_err(format!("Invalid date string: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Invalid date string: {e:?}")))
     }
 
     fn __str__(&self) -> String {
@@ -171,15 +174,15 @@ impl PyDate {
         )
     }
 
-    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {
         use pyo3::basic::CompareOp;
         match op {
-            CompareOp::Lt => Ok(self.0 < other.0),
-            CompareOp::Le => Ok(self.0 <= other.0),
-            CompareOp::Eq => Ok(self.0 == other.0),
-            CompareOp::Ne => Ok(self.0 != other.0),
-            CompareOp::Gt => Ok(self.0 > other.0),
-            CompareOp::Ge => Ok(self.0 >= other.0),
+            CompareOp::Lt => self.0 < other.0,
+            CompareOp::Le => self.0 <= other.0,
+            CompareOp::Eq => self.0 == other.0,
+            CompareOp::Ne => self.0 != other.0,
+            CompareOp::Gt => self.0 > other.0,
+            CompareOp::Ge => self.0 >= other.0,
         }
     }
 
@@ -197,8 +200,8 @@ impl PyDate {
 
 // ===== PyTime =====
 
-#[pyclass(name = "Time", module = "fasttime")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[pyclass(name = "Time", module = "fasttime", from_py_object)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyTime(Time);
 
 #[pymethods]
@@ -221,7 +224,7 @@ impl PyTime {
     fn new(hour: u8, minute: u8, second: u8, nanosecond: u32) -> PyResult<Self> {
         Time::from_hms_nano(hour, minute, second, nanosecond)
             .map(PyTime)
-            .map_err(|e| PyValueError::new_err(format!("Invalid time: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Invalid time: {e:?}")))
     }
 
     #[getter]
@@ -271,7 +274,7 @@ impl PyTime {
     fn parse(_cls: &Bound<'_, PyType>, s: &str) -> PyResult<Self> {
         s.parse::<Time>()
             .map(PyTime)
-            .map_err(|e| PyValueError::new_err(format!("Invalid time string: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Invalid time string: {e:?}")))
     }
 
     fn __str__(&self) -> String {
@@ -285,15 +288,15 @@ impl PyTime {
         )
     }
 
-    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {
         use pyo3::basic::CompareOp;
         match op {
-            CompareOp::Lt => Ok(self.0 < other.0),
-            CompareOp::Le => Ok(self.0 <= other.0),
-            CompareOp::Eq => Ok(self.0 == other.0),
-            CompareOp::Ne => Ok(self.0 != other.0),
-            CompareOp::Gt => Ok(self.0 > other.0),
-            CompareOp::Ge => Ok(self.0 >= other.0),
+            CompareOp::Lt => self.0 < other.0,
+            CompareOp::Le => self.0 <= other.0,
+            CompareOp::Eq => self.0 == other.0,
+            CompareOp::Ne => self.0 != other.0,
+            CompareOp::Gt => self.0 > other.0,
+            CompareOp::Ge => self.0 >= other.0,
         }
     }
 
@@ -308,8 +311,8 @@ impl PyTime {
 
 // ===== PyDuration =====
 
-#[pyclass(name = "Duration", module = "fasttime")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[pyclass(name = "Duration", module = "fasttime", from_py_object)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyDuration(Duration);
 
 #[pymethods]
@@ -374,15 +377,15 @@ impl PyDuration {
         format!("Duration.nanoseconds({})", self.0.total_nanos())
     }
 
-    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {
         use pyo3::basic::CompareOp;
         match op {
-            CompareOp::Lt => Ok(self.0 < other.0),
-            CompareOp::Le => Ok(self.0 <= other.0),
-            CompareOp::Eq => Ok(self.0 == other.0),
-            CompareOp::Ne => Ok(self.0 != other.0),
-            CompareOp::Gt => Ok(self.0 > other.0),
-            CompareOp::Ge => Ok(self.0 >= other.0),
+            CompareOp::Lt => self.0 < other.0,
+            CompareOp::Le => self.0 <= other.0,
+            CompareOp::Eq => self.0 == other.0,
+            CompareOp::Ne => self.0 != other.0,
+            CompareOp::Gt => self.0 > other.0,
+            CompareOp::Ge => self.0 >= other.0,
         }
     }
 
@@ -397,8 +400,8 @@ impl PyDuration {
 
 // ===== PyDateTime =====
 
-#[pyclass(name = "DateTime", module = "fasttime")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[pyclass(name = "DateTime", module = "fasttime", from_py_object)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyDateTime(DateTime);
 
 #[pymethods]
@@ -442,7 +445,7 @@ impl PyDateTime {
     fn from_unix_timestamp(_cls: &Bound<'_, PyType>, secs: i64, nanos: i32) -> PyResult<Self> {
         DateTime::from_unix_timestamp(secs, nanos)
             .map(PyDateTime)
-            .map_err(|e| PyValueError::new_err(format!("Invalid timestamp: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Invalid timestamp: {e:?}")))
     }
 
     /// Get Unix timestamp (seconds since Unix epoch).
@@ -472,7 +475,7 @@ impl PyDateTime {
         self.0
             .add_duration(dur.0)
             .map(PyDateTime)
-            .map_err(|e| PyValueError::new_err(format!("DateTime out of range: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("DateTime out of range: {e:?}")))
     }
 
     /// Calculate the difference between two DateTimes.
@@ -495,7 +498,7 @@ impl PyDateTime {
         {
             DateTime::now_utc()
                 .map(PyDateTime)
-                .map_err(|e| PyValueError::new_err(format!("Failed to get current time: {:?}", e)))
+                .map_err(|e| PyValueError::new_err(format!("Failed to get current time: {e:?}")))
         }
         #[cfg(not(feature = "std"))]
         {
@@ -518,10 +521,9 @@ impl PyDateTime {
     #[classmethod]
     #[pyo3(name = "parse")]
     fn parse(_cls: &Bound<'_, PyType>, s: &str) -> PyResult<Self> {
-        s.parse::<DateTime>().map(PyDateTime).map_err(|_| {
+        s.parse::<DateTime>().map(PyDateTime).map_err(|()| {
             PyValueError::new_err(format!(
-                "Invalid datetime string '{}'. Expected format: YYYY-MM-DDTHH:MM:SS[.fffffffff]Z",
-                s
+                "Invalid datetime string '{s}'. Expected format: YYYY-MM-DDTHH:MM:SS[.fffffffff]Z"
             ))
         })
     }
@@ -534,15 +536,15 @@ impl PyDateTime {
         format!("DateTime.parse('{}')", self.0)
     }
 
-    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {
         use pyo3::basic::CompareOp;
         match op {
-            CompareOp::Lt => Ok(self.0 < other.0),
-            CompareOp::Le => Ok(self.0 <= other.0),
-            CompareOp::Eq => Ok(self.0 == other.0),
-            CompareOp::Ne => Ok(self.0 != other.0),
-            CompareOp::Gt => Ok(self.0 > other.0),
-            CompareOp::Ge => Ok(self.0 >= other.0),
+            CompareOp::Lt => self.0 < other.0,
+            CompareOp::Le => self.0 <= other.0,
+            CompareOp::Eq => self.0 == other.0,
+            CompareOp::Ne => self.0 != other.0,
+            CompareOp::Gt => self.0 > other.0,
+            CompareOp::Ge => self.0 >= other.0,
         }
     }
 
@@ -557,8 +559,8 @@ impl PyDateTime {
 
 // ===== PyUtcOffset =====
 
-#[pyclass(name = "UtcOffset", module = "fasttime")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[pyclass(name = "UtcOffset", module = "fasttime", from_py_object)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyUtcOffset(UtcOffset);
 
 #[pymethods]
@@ -578,7 +580,7 @@ impl PyUtcOffset {
     fn from_seconds(_cls: &Bound<'_, PyType>, seconds: i32) -> PyResult<Self> {
         UtcOffset::from_seconds(seconds)
             .map(PyUtcOffset)
-            .map_err(|e| PyValueError::new_err(format!("Invalid offset: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Invalid offset: {e:?}")))
     }
 
     /// Create a UtcOffset from hours and minutes.
@@ -603,7 +605,7 @@ impl PyUtcOffset {
     ) -> PyResult<Self> {
         UtcOffset::from_hours_minutes(sign_positive, hours, minutes)
             .map(PyUtcOffset)
-            .map_err(|e| PyValueError::new_err(format!("Invalid offset: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Invalid offset: {e:?}")))
     }
 
     /// Get the offset as seconds.
@@ -626,15 +628,15 @@ impl PyUtcOffset {
         format!("UtcOffset.from_seconds({})", self.0.as_seconds())
     }
 
-    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {
         use pyo3::basic::CompareOp;
         match op {
-            CompareOp::Lt => Ok(self.0 < other.0),
-            CompareOp::Le => Ok(self.0 <= other.0),
-            CompareOp::Eq => Ok(self.0 == other.0),
-            CompareOp::Ne => Ok(self.0 != other.0),
-            CompareOp::Gt => Ok(self.0 > other.0),
-            CompareOp::Ge => Ok(self.0 >= other.0),
+            CompareOp::Lt => self.0 < other.0,
+            CompareOp::Le => self.0 <= other.0,
+            CompareOp::Eq => self.0 == other.0,
+            CompareOp::Ne => self.0 != other.0,
+            CompareOp::Gt => self.0 > other.0,
+            CompareOp::Ge => self.0 >= other.0,
         }
     }
 
@@ -649,8 +651,8 @@ impl PyUtcOffset {
 
 // ===== PyOffsetDateTime =====
 
-#[pyclass(name = "OffsetDateTime", module = "fasttime")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[pyclass(name = "OffsetDateTime", module = "fasttime", from_py_object)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyOffsetDateTime(OffsetDateTime);
 
 #[pymethods]
@@ -691,7 +693,7 @@ impl PyOffsetDateTime {
     ) -> PyResult<Self> {
         OffsetDateTime::from_local(date.0, time.0, offset.0)
             .map(PyOffsetDateTime)
-            .map_err(|e| PyValueError::new_err(format!("Invalid local datetime: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Invalid local datetime: {e:?}")))
     }
 
     #[getter]
@@ -716,7 +718,7 @@ impl PyOffsetDateTime {
         self.0
             .to_local()
             .map(PyDateTime)
-            .map_err(|e| PyValueError::new_err(format!("Local datetime out of range: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("Local datetime out of range: {e:?}")))
     }
 
     /// Get Unix timestamp (seconds since Unix epoch).
@@ -746,7 +748,7 @@ impl PyOffsetDateTime {
         self.0
             .add_duration(dur.0)
             .map(PyOffsetDateTime)
-            .map_err(|e| PyValueError::new_err(format!("DateTime out of range: {:?}", e)))
+            .map_err(|e| PyValueError::new_err(format!("DateTime out of range: {e:?}")))
     }
 
     /// Calculate the difference between two OffsetDateTimes.
@@ -776,10 +778,9 @@ impl PyOffsetDateTime {
     fn parse(_cls: &Bound<'_, PyType>, s: &str) -> PyResult<Self> {
         s.parse::<OffsetDateTime>()
             .map(PyOffsetDateTime)
-            .map_err(|_| {
+            .map_err(|()| {
                 PyValueError::new_err(format!(
-                    "Invalid offset datetime string '{}'. Expected RFC 3339 format: YYYY-MM-DDTHH:MM:SS[.fffffffff][Z|±HH:MM]",
-                    s
+                    "Invalid offset datetime string '{s}'. Expected RFC 3339 format: YYYY-MM-DDTHH:MM:SS[.fffffffff][Z|±HH:MM]"
                 ))
             })
     }
@@ -792,15 +793,15 @@ impl PyOffsetDateTime {
         format!("OffsetDateTime.parse('{}')", self.0)
     }
 
-    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {
         use pyo3::basic::CompareOp;
         match op {
-            CompareOp::Lt => Ok(self.0 < other.0),
-            CompareOp::Le => Ok(self.0 <= other.0),
-            CompareOp::Eq => Ok(self.0 == other.0),
-            CompareOp::Ne => Ok(self.0 != other.0),
-            CompareOp::Gt => Ok(self.0 > other.0),
-            CompareOp::Ge => Ok(self.0 >= other.0),
+            CompareOp::Lt => self.0 < other.0,
+            CompareOp::Le => self.0 <= other.0,
+            CompareOp::Eq => self.0 == other.0,
+            CompareOp::Ne => self.0 != other.0,
+            CompareOp::Gt => self.0 > other.0,
+            CompareOp::Ge => self.0 >= other.0,
         }
     }
 

@@ -46,7 +46,7 @@ mod tests {
         let time = Time::from_hms_nano(12, 34, 56, 123_456_789).unwrap();
         let dt = DateTime::new(date, time);
         let secs = dt.unix_timestamp();
-        let nanos = dt.time.nanosecond as i32;
+        let nanos = i32::try_from(dt.time.nanosecond).expect("nanoseconds fit in i32");
         let rt = DateTime::from_unix_timestamp(secs, nanos).unwrap();
         assert_eq!(dt, rt);
     }
@@ -182,6 +182,31 @@ mod tests {
             Err(DateError::OutOfRange),
             "Did not catch i32 year overflow"
         );
+
+        assert_eq!(
+            Date::from_days_since_unix_epoch(i64::MIN),
+            Err(DateError::OutOfRange)
+        );
+        assert_eq!(
+            Date::from_days_since_unix_epoch(i64::MAX),
+            Err(DateError::OutOfRange)
+        );
+        assert_eq!(max_date.add_days(i64::MAX), Err(DateError::OutOfRange));
+
+        assert_eq!(
+            DateTime::from_unix_timestamp(i64::MAX, i32::MAX),
+            Err(DateError::OutOfRange)
+        );
+        assert_eq!(
+            DateTime::from_unix_timestamp(i64::MIN, i32::MIN),
+            Err(DateError::OutOfRange)
+        );
+
+        let after_epoch = DateTime::from_unix_timestamp(1, 0).unwrap();
+        assert_eq!(
+            after_epoch.add_duration(Duration::nanoseconds(i128::MAX)),
+            Err(DateError::OutOfRange)
+        );
     }
 
     /// Test 3: Gregorian Leap Year Rules (The "Julian Map" Verification)
@@ -205,7 +230,7 @@ mod tests {
 
             // Round trip via fast algorithm
             let recovered = Date::from_days_since_unix_epoch(days).unwrap();
-            assert_eq!(date, recovered, "Failed date: {}-{}-{}", y, m, d);
+            assert_eq!(date, recovered, "Failed date: {y}-{m}-{d}");
 
             // Verify sequential continuity
             // If it's Feb 28 of a non-leap year, next day is Mar 1
@@ -247,8 +272,7 @@ mod tests {
             assert_eq!(
                 (date.year, date.month, date.day),
                 (exp_year, exp_month, exp_day),
-                "Date mismatch at days {}",
-                days_accum
+                "Date mismatch at days {days_accum}"
             );
 
             // Increment expected date by one day.
@@ -295,8 +319,7 @@ mod tests {
             assert_eq!(
                 (got.year, got.month, got.day),
                 (y, m, d),
-                "Epoch-neighbor mismatch at day {}",
-                days
+                "Epoch-neighbor mismatch at day {days}"
             );
         }
 
@@ -305,14 +328,13 @@ mod tests {
         for days in samples {
             let got = Date::from_days_since_unix_epoch(days).unwrap();
             let std_dt = StdOffsetDateTime::from_unix_timestamp(days * 86_400).unwrap();
-            assert_eq!(got.year, std_dt.year(), "Year mismatch at day {}", days);
+            assert_eq!(got.year, std_dt.year(), "Year mismatch at day {days}");
             assert_eq!(
                 got.month,
                 u8::from(std_dt.month()),
-                "Month mismatch at day {}",
-                days
+                "Month mismatch at day {days}"
             );
-            assert_eq!(got.day, std_dt.day(), "Day mismatch at day {}", days);
+            assert_eq!(got.day, std_dt.day(), "Day mismatch at day {days}");
         }
     }
 
@@ -338,7 +360,7 @@ mod tests {
 
         for &(secs, nanos) in samples {
             let fast = DateTime::from_unix_timestamp(secs, nanos).unwrap();
-            let total = (secs as i128) * 1_000_000_000 + nanos as i128;
+            let total = i128::from(secs) * 1_000_000_000 + i128::from(nanos);
             let std_dt = StdOffsetDateTime::from_unix_timestamp_nanos(total).unwrap();
 
             assert_eq!(fast.date.year, std_dt.year());
@@ -437,7 +459,7 @@ mod tests {
                     28
                 }
             }
-            _ => panic!("invalid month in test helper: {}", month),
+            _ => panic!("invalid month in test helper: {month}"),
         }
     }
 }
