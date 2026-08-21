@@ -2,6 +2,7 @@
 
 [![Test](https://github.com/RustedBytes/fasttime/actions/workflows/test.yml/badge.svg)](https://github.com/RustedBytes/fasttime/actions/workflows/test.yml)
 [![Crates.io Version](https://img.shields.io/crates/v/fasttime)](https://crates.io/crates/fasttime)
+[![PyPI Version](https://img.shields.io/pypi/v/fasttime-rs)](https://pypi.org/project/fasttime-rs/)
 
 `fasttime` is a small UTC-focused date/time library for Rust. It is built
 around [Ben Joffe's constant-time 64-bit days→date algorithm](https://www.benjoffe.com/fast-date-64) and offers a simple,
