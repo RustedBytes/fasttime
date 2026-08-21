@@ -3,6 +3,6 @@ revision = 3
 requires-python = ">=3.10"
 
 [[package]]
-name = "fasttime"
+name = "fasttime-rs"
 version = "0.3.0"
 source = { editable = "." }

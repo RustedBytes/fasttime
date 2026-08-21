@@ -16,7 +16,7 @@
 ## Installation
 
 ```bash
-pip install fasttime
+pip install fasttime-rs
 ```
 
 Requires Python 3.10 or later.

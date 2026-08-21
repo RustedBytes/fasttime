@@ -34,8 +34,7 @@ fasttime = "0.3"
 ### Python
 
 ```bash
-pip install maturin
-maturin develop --release
+pip install fasttime-rs
 ```
 
 Disable the default `std` feature when targeting bare-metal or embedded

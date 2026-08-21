@@ -3,7 +3,7 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "fasttime"
+name = "fasttime-rs"
 version = "0.3.0"
 description = "Fast UTC date/time library with Python bindings"
 readme = "python/README.md"
