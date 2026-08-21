@@ -13,7 +13,7 @@
 //!   - `Date`: "YYYY-MM-DD"
 //!   - `Time`: "HH:MM:SS[.fffffffff]"
 //!   - `DateTime` (UTC): "YYYY-MM-DDTHH:MM:SS[.fffffffff]Z"
-//!   - `OffsetDateTime`: "YYYY-MM-DDTHH:MM:SS[.fffffffff][Z|±HH:MM]" (RFC 3339 subset).
+//!   - `OffsetDateTime`: `YYYY-MM-DDTHH:MM:SS[.fffffffff][Z|±HH:MM]` (RFC 3339 subset).
 //! - `DateTime::now_utc()` when the `std` feature is enabled.
 //!
 //! ## Python Bindings
@@ -874,7 +874,7 @@ impl FromStr for OffsetDateTime {
     type Err = ();
 
     /// Parse RFC 3339-style:
-    /// "YYYY-MM-DDTHH:MM:SS[.fffffffff][Z|±HH:MM]"
+    /// `YYYY-MM-DDTHH:MM:SS[.fffffffff][Z|±HH:MM]`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.trim();
         let (date_part, rest) = s.split_once('T').or_else(|| s.split_once(' ')).ok_or(())?;

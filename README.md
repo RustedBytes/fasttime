@@ -28,7 +28,7 @@ only depends on `core` by default and enables a handful of conveniences (such as
 
 ```toml
 [dependencies]
-fasttime = "0.2"
+fasttime = "0.3"
 ```
 
 ### Python
@@ -43,7 +43,7 @@ environments:
 
 ```toml
 [dependencies]
-fasttime = { version = "0.1", default-features = false }
+fasttime = { version = "0.3", default-features = false }
 ```
 
 ## Example
