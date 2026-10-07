@@ -19,7 +19,7 @@ def main():
     print(f"Year: {date.year}, Month: {date.month}, Day: {date.day}")
     print(f"Weekday: {date.weekday()}")
     print(f"Day of year: {date.ordinal()}")
-    
+
     # Add/subtract days
     tomorrow = date.add_days(1)
     yesterday = date.add_days(-1)
@@ -45,7 +45,7 @@ def main():
     print(f"DateTime: {dt}")
     print(f"Date component: {dt.date}")
     print(f"Time component: {dt.time}")
-    
+
     # Get current time
     now = fasttime.DateTime.now_utc()
     print(f"Current UTC time: {now}")
@@ -54,25 +54,25 @@ def main():
     # 4. Working with Durations
     print("4. Working with Durations")
     print("-" * 40)
-    
+
     # Create durations
     one_hour = fasttime.Duration.seconds(3600)
     one_day = fasttime.Duration.seconds(86400)
     half_second = fasttime.Duration.milliseconds(500)
-    
+
     print(f"One hour: {one_hour.total_seconds()} seconds")
     print(f"One day: {one_day.total_seconds()} seconds")
     print(f"Half second: {half_second.total_seconds()} seconds")
-    
+
     # Add durations
     total = one_hour + half_second
     print(f"One hour + 500ms: {total.total_seconds()} seconds")
-    
+
     # Add duration to datetime
     later = dt.add_duration(one_hour)
     print(f"Original: {dt}")
     print(f"One hour later: {later}")
-    
+
     # Calculate difference
     diff = later.difference(dt)
     print(f"Difference: {diff.total_seconds()} seconds")
@@ -83,7 +83,7 @@ def main():
     print("-" * 40)
     date1 = fasttime.Date(2024, 1, 1)
     date2 = fasttime.Date(2024, 12, 31)
-    
+
     print(f"{date1} < {date2}: {date1 < date2}")
     print(f"{date1} == {date2}: {date1 == date2}")
     print(f"{date1} > {date2}: {date1 > date2}")
@@ -108,10 +108,10 @@ def main():
     print("-" * 40)
     epoch = fasttime.Date.from_days_since_unix_epoch(0)
     print(f"Unix epoch (day 0): {epoch}")
-    
+
     days = date.days_since_unix_epoch()
     print(f"{date} is {days} days since epoch")
-    
+
     reconstructed = fasttime.Date.from_days_since_unix_epoch(days)
     print(f"Reconstructed: {reconstructed}")
     print(f"Match: {date == reconstructed}")
