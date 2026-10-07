@@ -1,0 +1,90 @@
+name: Update Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version in MAJOR.MINOR.PATCH format (without a v prefix)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-version
+  cancel-in-progress: false
+
+jobs:
+  update-version:
+    name: Update fasttime to ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Update package metadata and lockfiles
+        env:
+          FASTTIME_VERSION: ${{ inputs.version }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          version = os.environ["FASTTIME_VERSION"]
+          if not re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)", version):
+              raise SystemExit("Version must use MAJOR.MINOR.PATCH format without a v prefix.")
+
+          replacements = {
+              Path("Cargo.toml"): (
+                  r'(?ms)(\[package\]\nname = "fasttime"\nversion = ")[^"]+(")',
+                  rf'\g<1>{version}\g<2>',
+              ),
+              Path("pyproject.toml"): (
+                  r'(?ms)(\[project\]\nname = "fasttime-rs"\nversion = ")[^"]+(")',
+                  rf'\g<1>{version}\g<2>',
+              ),
+              Path("Cargo.lock"): (
+                  r'(?ms)(\[\[package\]\]\nname = "fasttime"\nversion = ")[^"]+(")',
+                  rf'\g<1>{version}\g<2>',
+              ),
+          }
+
+          for path, (pattern, replacement) in replacements.items():
+              content = path.read_text(encoding="utf-8")
+              updated, count = re.subn(pattern, replacement, content)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one fasttime version in {path}, found {count}.")
+              path.write_text(updated, encoding="utf-8")
+          PY
+
+      - name: Verify package metadata
+        run: |
+          cargo metadata --locked --no-deps --format-version 1 >/dev/null
+          git diff --check
+          if git diff --quiet -- Cargo.toml Cargo.lock pyproject.toml; then
+            echo "The requested version is already current." >&2
+            exit 1
+          fi
+
+      - name: Commit and push version update
+        env:
+          FASTTIME_VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock pyproject.toml
+          git commit -m "release: v${FASTTIME_VERSION}"
+          git push
