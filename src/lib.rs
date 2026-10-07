@@ -16,6 +16,19 @@
 //!   - `OffsetDateTime`: `YYYY-MM-DDTHH:MM:SS[.fffffffff][Z|±HH:MM]` (RFC 3339 subset).
 //! - `DateTime::now_utc()` when the `std` feature is enabled.
 //!
+//! ## Allocation behavior
+//!
+//! Rust parsing borrows the input string and returns inline `Copy` values;
+//! calendar arithmetic and timestamp conversion do not allocate. `Display`
+//! writes directly to the supplied formatter. Use `core::fmt::Write` with a
+//! caller-owned buffer to format without allocating; `to_string()` and
+//! `format!()` allocate their owned output.
+//!
+//! Python `str()` and `repr()` format through a fixed stack buffer, avoiding
+//! an intermediate Rust `String`. The resulting Python Unicode object still
+//! allocates and copies the formatted bytes. Python object construction and
+//! exceptions are outside the allocation-free Rust API guarantee.
+//!
 //! ## Python Bindings
 //!
 //! When built with the `python` feature, this crate provides Python bindings via `PyO3`.

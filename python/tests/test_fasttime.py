@@ -276,3 +276,29 @@ def test_round_trip_offset_datetime():
     serialized = str(odt)
     
     assert original == serialized
+
+
+@pytest.mark.parametrize("value, text, representation", [
+    (fasttime.Weekday.MONDAY, "Monday", "Monday"),
+    (fasttime.Date(-2147483648, 1, 1), "-2147483648-01-01",
+     "Date(year=-2147483648, month=1, day=1)"),
+    (fasttime.Date(2147483647, 12, 31), "2147483647-12-31",
+     "Date(year=2147483647, month=12, day=31)"),
+    (fasttime.Time(23, 59, 59, nanosecond=999999999), "23:59:59.999999999",
+     "Time(hour=23, minute=59, second=59, nanosecond=999999999)"),
+    (fasttime.Duration.nanoseconds(-(2**127)), f"Duration({-(2**127)} ns)",
+     f"Duration.nanoseconds({-(2**127)})"),
+    (fasttime.Duration.nanoseconds(2**127-1), f"Duration({2**127-1} ns)",
+     f"Duration.nanoseconds({2**127-1})"),
+    (fasttime.DateTime.parse("2024-06-15T12:30:45.123456789Z"),
+     "2024-06-15T12:30:45.123456789Z",
+     "DateTime.parse('2024-06-15T12:30:45.123456789Z')"),
+    (fasttime.UtcOffset.from_seconds(-86399), "-23:59",
+     "UtcOffset.from_seconds(-86399)"),
+    (fasttime.OffsetDateTime.parse("2024-06-15T12:30:45.123456789+05:30"),
+     "2024-06-15T12:30:45.123456789+05:30",
+     "OffsetDateTime.parse('2024-06-15T12:30:45.123456789+05:30')"),
+])
+def test_string_representations(value, text, representation):
+    assert str(value) == text
+    assert repr(value) == representation
