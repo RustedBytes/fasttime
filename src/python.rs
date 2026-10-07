@@ -5,11 +5,43 @@
 // backticks around Python type names would leak into `help()` output.
 #![allow(clippy::doc_markdown)]
 
+use core::fmt::{self, Write};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::PyType;
+use pyo3::types::{PyString, PyType};
 
 use crate::{Date, DateTime, Duration, OffsetDateTime, Time, UtcOffset, Weekday as RustWeekday};
+
+// All built-in representations fit in 128 bytes, including i32 years and
+// i128 durations. Keep formatting on the stack; only the returned Python
+// Unicode object needs a heap allocation.
+struct FormatBuffer {
+    bytes: [u8; 128],
+    len: usize,
+}
+
+impl Write for FormatBuffer {
+    fn write_str(&mut self, value: &str) -> fmt::Result {
+        let end = self.len.checked_add(value.len()).ok_or(fmt::Error)?;
+        let output = self.bytes.get_mut(self.len..end).ok_or(fmt::Error)?;
+        output.copy_from_slice(value.as_bytes());
+        self.len = end;
+        Ok(())
+    }
+}
+
+fn python_string<'py>(py: Python<'py>, args: fmt::Arguments<'_>) -> PyResult<Bound<'py, PyString>> {
+    let mut buffer = FormatBuffer {
+        bytes: [0; 128],
+        len: 0,
+    };
+    buffer
+        .write_fmt(args)
+        .map_err(|_| PyValueError::new_err("Representation exceeds formatting buffer"))?;
+    let text = core::str::from_utf8(&buffer.bytes[..buffer.len])
+        .map_err(|_| PyValueError::new_err("Invalid UTF-8 in representation"))?;
+    Ok(PyString::new(py, text))
+}
 
 // ===== Weekday =====
 
@@ -40,12 +72,12 @@ impl PyWeekday {
         self.0.number_from_monday()
     }
 
-    fn __repr__(&self) -> String {
-        format!("{:?}", self.0)
+    fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("{:?}", self.0))
     }
 
-    fn __str__(&self) -> String {
-        format!("{:?}", self.0)
+    fn __str__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("{:?}", self.0))
     }
 }
 
@@ -163,14 +195,17 @@ impl PyDate {
             .map_err(|e| PyValueError::new_err(format!("Invalid date string: {e:?}")))
     }
 
-    fn __str__(&self) -> String {
-        self.0.to_string()
+    fn __str__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("{}", self.0))
     }
 
-    fn __repr__(&self) -> String {
-        format!(
-            "Date(year={}, month={}, day={})",
-            self.0.year, self.0.month, self.0.day
+    fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(
+            py,
+            format_args!(
+                "Date(year={}, month={}, day={})",
+                self.0.year, self.0.month, self.0.day
+            ),
         )
     }
 
@@ -277,14 +312,17 @@ impl PyTime {
             .map_err(|e| PyValueError::new_err(format!("Invalid time string: {e:?}")))
     }
 
-    fn __str__(&self) -> String {
-        self.0.to_string()
+    fn __str__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("{}", self.0))
     }
 
-    fn __repr__(&self) -> String {
-        format!(
-            "Time(hour={}, minute={}, second={}, nanosecond={})",
-            self.0.hour, self.0.minute, self.0.second, self.0.nanosecond
+    fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(
+            py,
+            format_args!(
+                "Time(hour={}, minute={}, second={}, nanosecond={})",
+                self.0.hour, self.0.minute, self.0.second, self.0.nanosecond
+            ),
         )
     }
 
@@ -369,12 +407,15 @@ impl PyDuration {
         PyDuration(-self.0)
     }
 
-    fn __str__(&self) -> String {
-        format!("Duration({} ns)", self.0.total_nanos())
+    fn __str__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("Duration({} ns)", self.0.total_nanos()))
     }
 
-    fn __repr__(&self) -> String {
-        format!("Duration.nanoseconds({})", self.0.total_nanos())
+    fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(
+            py,
+            format_args!("Duration.nanoseconds({})", self.0.total_nanos()),
+        )
     }
 
     fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {
@@ -528,12 +569,12 @@ impl PyDateTime {
         })
     }
 
-    fn __str__(&self) -> String {
-        self.0.to_string()
+    fn __str__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("{}", self.0))
     }
 
-    fn __repr__(&self) -> String {
-        format!("DateTime.parse('{}')", self.0)
+    fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("DateTime.parse('{}')", self.0))
     }
 
     fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {
@@ -620,12 +661,15 @@ impl PyUtcOffset {
         self.0.is_utc()
     }
 
-    fn __str__(&self) -> String {
-        self.0.to_string()
+    fn __str__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("{}", self.0))
     }
 
-    fn __repr__(&self) -> String {
-        format!("UtcOffset.from_seconds({})", self.0.as_seconds())
+    fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(
+            py,
+            format_args!("UtcOffset.from_seconds({})", self.0.as_seconds()),
+        )
     }
 
     fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {
@@ -785,12 +829,12 @@ impl PyOffsetDateTime {
             })
     }
 
-    fn __str__(&self) -> String {
-        self.0.to_string()
+    fn __str__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("{}", self.0))
     }
 
-    fn __repr__(&self) -> String {
-        format!("OffsetDateTime.parse('{}')", self.0)
+    fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyString>> {
+        python_string(py, format_args!("OffsetDateTime.parse('{}')", self.0))
     }
 
     fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> bool {

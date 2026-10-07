@@ -34,3 +34,21 @@ Documentation = "https://github.com/RustedBytes/fasttime/blob/main/python/README
 features = ["pyo3/extension-module", "python", "std"]
 python-source = "python"
 module-name = "fasttime"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff==0.16.10", "pyright==1.1.414"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.pyright]
+include = ["python"]
+extraPaths = ["python"]
+pythonVersion = "3.10"
+typeCheckingMode = "standard"
+# The implementation is a Rust extension; its API is declared in fasttime.pyi.
+reportMissingModuleSource = "none"
