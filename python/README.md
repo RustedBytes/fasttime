@@ -65,6 +65,30 @@ timestamp_ns = dt.unix_timestamp_nanos()  # nanoseconds
 dt_from_ts = fasttime.DateTime.from_unix_timestamp(timestamp, 123_456_789)
 ```
 
+## Pickle serialization
+
+`DateTime` and `Duration` support `pickle.dumps()` and `pickle.loads()` with all
+pickle protocols supported by your Python version. Integer nanoseconds preserve
+full precision, including negative values and the complete supported value ranges.
+
+```python
+import pickle
+import fasttime
+
+before_epoch = fasttime.DateTime.from_unix_timestamp(0, -1)
+restored = pickle.loads(pickle.dumps(before_epoch))
+assert restored == before_epoch
+assert restored.unix_timestamp_nanos() == -1
+assert hash(restored) == hash(before_epoch)
+
+duration = fasttime.Duration.nanoseconds(-1_000_000_001)
+assert pickle.loads(pickle.dumps(duration)).total_nanos() == -1_000_000_001
+```
+
+Reconstruction uses the public `Duration.nanoseconds()` and
+`DateTime.from_unix_timestamp()` methods. The other fasttime types do not yet
+support pickling. As with any pickle data, only deserialize trusted inputs.
+
 ## API Reference
 
 ### Date
