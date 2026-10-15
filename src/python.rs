@@ -395,6 +395,14 @@ impl PyDuration {
         self.0.total_nanos()
     }
 
+    /// Reconstruct from integer nanoseconds without losing precision.
+    fn __reduce__<'py>(&self, py: Python<'py>) -> PyResult<(Bound<'py, PyAny>, (i128,))> {
+        Ok((
+            py.get_type::<Self>().getattr("nanoseconds")?,
+            (self.0.total_nanos(),),
+        ))
+    }
+
     fn __add__(&self, other: &Self) -> Self {
         PyDuration(self.0 + other.0)
     }
@@ -499,6 +507,16 @@ impl PyDateTime {
     #[pyo3(name = "unix_timestamp_nanos")]
     fn unix_timestamp_nanos(&self) -> i128 {
         self.0.unix_timestamp_nanos()
+    }
+
+    /// Reconstruct from whole Unix seconds and a nonnegative nanosecond part.
+    fn __reduce__<'py>(&self, py: Python<'py>) -> PyResult<(Bound<'py, PyAny>, (i64, u32))> {
+        // unix_timestamp() floors negative timestamps; nanosecond is always
+        // in 0..1_000_000_000, including the instant just before the epoch.
+        Ok((
+            py.get_type::<Self>().getattr("from_unix_timestamp")?,
+            (self.0.unix_timestamp(), self.0.time.nanosecond),
+        ))
     }
 
     /// Add a duration to this DateTime.
