@@ -497,6 +497,27 @@ impl PyDateTime {
             .map_err(|e| PyValueError::new_err(format!("Invalid timestamp: {e:?}")))
     }
 
+    /// Create a DateTime from integer nanoseconds since Unix epoch.
+    ///
+    /// Args:
+    ///     nanos: Total nanoseconds since 1970-01-01T00:00:00Z (signed i128).
+    ///         Negative values represent instants before the epoch.
+    ///
+    /// Returns:
+    ///     DateTime: A new DateTime with exact nanosecond precision.
+    ///
+    /// Raises:
+    ///     ValueError: If the timestamp is outside the supported date range.
+    ///     OverflowError: If nanos is outside the signed 128-bit integer range.
+    ///     TypeError: If nanos is not an integer.
+    #[classmethod]
+    #[pyo3(name = "from_unix_timestamp_nanos")]
+    fn from_unix_timestamp_nanos(_cls: &Bound<'_, PyType>, nanos: i128) -> PyResult<Self> {
+        DateTime::from_unix_timestamp_nanos(nanos)
+            .map(PyDateTime)
+            .map_err(|e| PyValueError::new_err(format!("Invalid timestamp: {e:?}")))
+    }
+
     /// Get Unix timestamp (seconds since Unix epoch).
     #[pyo3(name = "unix_timestamp")]
     fn unix_timestamp(&self) -> i64 {

@@ -63,7 +63,20 @@ print(local_dt)  # 2024-01-15T14:30:45.123456789+05:30
 timestamp = dt.unix_timestamp()  # seconds
 timestamp_ns = dt.unix_timestamp_nanos()  # nanoseconds
 dt_from_ts = fasttime.DateTime.from_unix_timestamp(timestamp, 123_456_789)
+restored = fasttime.DateTime.from_unix_timestamp_nanos(timestamp_ns)
+assert restored == dt
+before_epoch = fasttime.DateTime.from_unix_timestamp_nanos(-1)
+assert str(before_epoch) == "1969-12-31T23:59:59.999999999Z"
 ```
+
+`DateTime.from_unix_timestamp_nanos(nanos: int)` is the exact inverse of
+`unix_timestamp_nanos()` for every valid `DateTime`. It accepts integer
+nanoseconds in the signed 128-bit range without conversion through `float`.
+Negative values correctly preserve the fractional second before the epoch.
+The full date range (years `-2147483648` through `2147483647`) is supported.
+An integer within `i128` but outside the supported date range raises
+`ValueError`; an integer outside `i128` raises `OverflowError`. Non-integer
+inputs such as floats raise `TypeError`.
 
 ## Pickle serialization
 
@@ -157,6 +170,7 @@ dt.difference(other: DateTime) -> Duration      # Calculate difference
 
 # Class methods
 DateTime.from_unix_timestamp(secs: int, nanos: int = 0) -> DateTime
+DateTime.from_unix_timestamp_nanos(nanos: int) -> DateTime
 DateTime.now_utc() -> DateTime                  # Current UTC time
 DateTime.parse(s: str) -> DateTime              # Parse "YYYY-MM-DDTHH:MM:SS[.fff]Z"
 ```

@@ -600,6 +600,37 @@ impl DateTime {
         Ok(DateTime { date, time })
     }
 
+    /// Build from integer nanoseconds since 1970-01-01T00:00:00Z.
+    ///
+    /// This is the exact inverse of [`Self::unix_timestamp_nanos`] for every
+    /// valid `DateTime`. Negative values use Euclidean division, so `-1`
+    /// represents 1969-12-31T23:59:59.999999999Z.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DateError::OutOfRange`] if the timestamp falls outside the
+    /// supported date range (years `i32::MIN..=i32::MAX`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fasttime::DateTime;
+    ///
+    /// let dt = DateTime::from_unix_timestamp_nanos(-1).unwrap();
+    /// assert_eq!(dt.to_string(), "1969-12-31T23:59:59.999999999Z");
+    /// assert_eq!(dt.unix_timestamp_nanos(), -1);
+    /// assert_eq!(DateTime::from_unix_timestamp_nanos(dt.unix_timestamp_nanos()), Ok(dt));
+    /// ```
+    #[inline]
+    pub fn from_unix_timestamp_nanos(nanos: i128) -> Result<DateTime, DateError> {
+        let secs =
+            i64::try_from(nanos.div_euclid(1_000_000_000)).map_err(|_| DateError::OutOfRange)?;
+        // The Euclidean remainder is in 0..1_000_000_000, even for i128::MIN.
+        let subsec_nanos =
+            i32::try_from(nanos.rem_euclid(1_000_000_000)).map_err(|_| DateError::OutOfRange)?;
+        Self::from_unix_timestamp(secs, subsec_nanos)
+    }
+
     /// Seconds since Unix epoch (1970-01-01T00:00:00Z).
     #[inline]
     #[must_use]
