@@ -191,6 +191,15 @@ class DateTime:
         """Create a DateTime from Unix timestamp."""
         ...
 
+    @classmethod
+    def from_unix_timestamp_nanos(cls, nanos: int) -> DateTime:
+        """Create from exact integer nanoseconds (i128) since Unix epoch.
+
+        Raises ValueError outside the date range, OverflowError outside i128,
+        and TypeError for non-integer inputs.
+        """
+        ...
+
     def unix_timestamp(self) -> int:
         """Get Unix timestamp (seconds since Unix epoch)."""
         ...

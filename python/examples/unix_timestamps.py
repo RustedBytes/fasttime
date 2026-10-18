@@ -88,16 +88,21 @@ def main():
     print("-" * 40)
 
     original = fasttime.DateTime.parse("2024-06-15T14:30:45.123456789Z")
-    timestamp = original.unix_timestamp()
-    nanos = original.time.nanosecond
-
-    reconstructed = fasttime.DateTime.from_unix_timestamp(timestamp, nanos)
+    timestamp_nanos = original.unix_timestamp_nanos()
+    reconstructed = fasttime.DateTime.from_unix_timestamp_nanos(timestamp_nanos)
+    assert reconstructed == original
 
     print(f"Original:      {original}")
-    print(f"Timestamp:     {timestamp}")
-    print(f"Nanoseconds:   {nanos}")
+    print(f"Timestamp ns:  {timestamp_nanos}")
     print(f"Reconstructed: {reconstructed}")
     print(f"Match:         {original == reconstructed}")
+    before_epoch = fasttime.DateTime.from_unix_timestamp_nanos(-1)
+    assert str(before_epoch) == "1969-12-31T23:59:59.999999999Z"
+    assert (
+        fasttime.DateTime.from_unix_timestamp_nanos(before_epoch.unix_timestamp_nanos())
+        == before_epoch
+    )
+    print(f"-1 ns:         {before_epoch}")
     print()
 
     # 7. Timestamp Arithmetic

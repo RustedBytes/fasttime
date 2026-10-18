@@ -66,6 +66,8 @@ fn main() -> Result<(), DateError> {
 
     // Combine dates and times to work with UTC instants.
     let dt = DateTime::from_unix_timestamp(1_700_000_000, 123_456_789)?;
+    let restored = DateTime::from_unix_timestamp_nanos(dt.unix_timestamp_nanos())?;
+    assert_eq!(restored, dt);
     let later = dt.add_duration(Duration::seconds(90))?;
     println!("Delta: {} ns", later.difference(dt).total_nanos());
 
@@ -79,6 +81,18 @@ fn main() -> Result<(), DateError> {
     Ok(())
 }
 ```
+
+## Lossless Unix timestamps
+
+`DateTime::from_unix_timestamp_nanos(nanos: i128)` reconstructs a UTC instant
+from integer nanoseconds without losing subsecond precision. It is the inverse
+of `unix_timestamp_nanos()` for every valid `DateTime`, including dates before
+1970 and the entire supported year range (`i32::MIN..=i32::MAX`).
+
+Negative values use Euclidean division: `-1` means
+`1969-12-31T23:59:59.999999999Z`. Inputs outside the date range return
+`DateError::OutOfRange`, including `i128::MIN` and `i128::MAX`.
+The existing `from_unix_timestamp(secs, nanos)` API remains available.
 
 ## Benchmarks
 
